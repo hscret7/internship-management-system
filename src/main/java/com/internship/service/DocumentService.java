@@ -108,7 +108,7 @@ public class DocumentService {
     /**
      * Lưu hợp đồng (HR upload) theo US9.
      */
-    public Contract saveContract(int applicationId, int hrUserId, Part filePart, String baseUploadDir) 
+    public Contract saveContract(int applicationId, long hrUserId, Part filePart, String baseUploadDir)
             throws IllegalArgumentException, IOException, SQLException {
         validateFile(filePart);
 

@@ -19,7 +19,7 @@ public class InternProfileDAO {
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            ps.setInt(1, profile.getUserId());
+            ps.setLong(1, profile.getUserId());
             ps.setString(2, profile.getFullName());
             ps.setDate(3, profile.getDob());
             ps.setString(4, profile.getGender());
@@ -90,11 +90,11 @@ public class InternProfileDAO {
         return null;
     }
 
-    public InternProfile getProfileByUserId(int userId) throws SQLException {
+    public InternProfile getProfileByUserId(long userId) throws SQLException {
         String sql = "SELECT * FROM intern_profiles WHERE user_id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
+            ps.setLong(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToProfile(rs);
@@ -166,7 +166,7 @@ public class InternProfileDAO {
     private InternProfile mapResultSetToProfile(ResultSet rs) throws SQLException {
         InternProfile p = new InternProfile();
         p.setProfileId(rs.getInt("profile_id"));
-        p.setUserId(rs.getInt("user_id"));
+        p.setUserId(rs.getLong("user_id"));
         p.setFullName(rs.getString("full_name"));
         p.setDob(rs.getDate("dob"));
         p.setGender(rs.getString("gender"));

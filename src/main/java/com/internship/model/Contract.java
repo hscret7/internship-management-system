@@ -16,7 +16,7 @@ public class Contract implements Serializable {
     private String filePath;
     private long fileSize;
     private String mimeType;
-    private int uploadedBy; // HR user_id
+    private long uploadedBy; // HR user_id
     private Timestamp uploadedAt;
     private String status; // 'PENDING_CONFIRMATION', 'CONFIRMED'
     private Timestamp confirmedAt;
@@ -25,7 +25,7 @@ public class Contract implements Serializable {
     }
 
     public Contract(int contractId, int applicationId, String fileName, String filePath, 
-                    long fileSize, String mimeType, int uploadedBy, Timestamp uploadedAt, 
+                    long fileSize, String mimeType, long uploadedBy, Timestamp uploadedAt,
                     String status, Timestamp confirmedAt) {
         this.contractId = contractId;
         this.applicationId = applicationId;
@@ -87,11 +87,11 @@ public class Contract implements Serializable {
         this.mimeType = mimeType;
     }
 
-    public int getUploadedBy() {
+    public long getUploadedBy() {
         return uploadedBy;
     }
 
-    public void setUploadedBy(int uploadedBy) {
+    public void setUploadedBy(long uploadedBy) {
         this.uploadedBy = uploadedBy;
     }
 

@@ -37,3 +37,10 @@ uploads/
 # Temporary
 tmp/
 temp/
+
+
+# Local database configuration
+src/main/resources/db.properties
+
+# Local mail configuration
+src/main/resources/mail.properties

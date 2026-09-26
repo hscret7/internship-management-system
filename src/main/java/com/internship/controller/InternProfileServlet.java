@@ -43,7 +43,7 @@ public class InternProfileServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("user") : null;
+        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -81,7 +81,7 @@ public class InternProfileServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("user") : null;
+        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");

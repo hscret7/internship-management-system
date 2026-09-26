@@ -1,0 +1,10 @@
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=587
+mail.smtp.auth=true
+mail.smtp.starttls.enable=true
+
+mail.username=your-email@example.com
+mail.password=your-app-password
+
+mail.from=your-email@example.com
+mail.from.name=Internship Management System

@@ -1,5 +1,5 @@
-# INTERNSHIP MANAGEMENT SYSTEM - BACKEND 2 (BE2)
-> **Phạm vi phụ trách**: Quản lý Hồ sơ thực tập sinh, Tài liệu (CV / Đơn ứng tuyển) và Hợp đồng thực tập.
+# INTERNSHIP MANAGEMENT SYSTEM - BE1 + BE2 INTEGRATION
+> Nhánh tích hợp nền tảng đăng nhập/phân quyền của BE1 với hồ sơ, tài liệu và hợp đồng của BE2. Chưa gồm chức năng nộp hoặc duyệt Application của BE3.
 
 ---
 
@@ -10,7 +10,7 @@
 | **Model** | `InternProfile.java` | Thực thể hồ sơ thực tập sinh (thông tin cá nhân, trường, ngành, GPA, kỹ năng, trạng thái) |
 | | `Document.java` | Thực thể tài liệu đính kèm (CV, Đơn xin thực tập, trạng thái duyệt PENDING/APPROVED/REJECTED) |
 | | `Contract.java` | Thực thể Hợp đồng thực tập (US9 & US10, lưu confirmed_at và trạng thái CONFIRMED) |
-| | `User.java` | Thực thể người dùng hỗ trợ phân quyền trong Session |
+| | `User.java` | Thực thể người dùng chung của BE1; BE2 dùng cùng đối tượng trong Session |
 | **DAO** | `InternProfileDAO.java` | CRUD hồ sơ, tìm kiếm đa tiêu chí (theo tên, trường, ngành) |
 | | `DocumentDAO.java` | Thêm, xem, xóa tài liệu đính kèm |
 | | `ContractDAO.java` | Lưu hợp đồng theo application_id, cập nhật trạng thái xác nhận |
@@ -29,13 +29,11 @@
 
 ### 2.1. Cấu hình Cơ sở dữ liệu (MySQL)
 1. Mở MySQL Workbench hoặc phpMyAdmin (localhost:8080).
-2. Chạy lần lượt 2 file SQL:
-   - `sql/schema_be2.sql`: Tạo database và các bảng.
-   - `sql/seed_data_qa.sql`: Nạp tài khoản và dữ liệu mẫu kiểm thử.
-3. Nếu cổng MySQL khác `3306` (Ví dụ máy Huệ dùng Docker port `3307`), cấu hình biến môi trường hoặc chỉnh trực tiếp trong file `com.internship.util.DBContext.java`:
-   - `DB_PORT`: `3307`
-   - `DB_USER`: `root`
-   - `DB_PASS`: `root`
+2. Trên database test mới, chạy lần lượt 3 file SQL:
+   - `database/schema.sql`: Tạo database `internship_management`, `roles`, `users` của BE1.
+   - `sql/schema_be2.sql`: Thêm `intern_profiles`, `applications`, `documents`, `contracts` của BE2.
+   - `sql/seed_data_qa.sql`: Nạp tài khoản và dữ liệu mẫu chỉ để kiểm thử local.
+3. Sao chép `src/main/resources/db.properties.example` thành `src/main/resources/db.properties`, rồi sửa host/port/tài khoản/mật khẩu MySQL của máy bạn. File `db.properties` chỉ lưu local, tuyệt đối không commit. BE2 DAO cũng dùng cấu hình này qua `DBContext`.
 
 ### 2.2. Build và Run với Apache Tomcat 10.1
 - Dự án quản lý bằng **Maven**:

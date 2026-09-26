@@ -116,7 +116,7 @@ public class InternProfileService {
         return profileDAO.getProfileById(profileId);
     }
 
-    public InternProfile getProfileByUserId(int userId) throws SQLException {
+    public InternProfile getProfileByUserId(long userId) throws SQLException {
         return profileDAO.getProfileByUserId(userId);
     }
 

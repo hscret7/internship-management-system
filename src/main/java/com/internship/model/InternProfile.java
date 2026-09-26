@@ -11,7 +11,7 @@ public class InternProfile implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private int profileId;
-    private int userId;
+    private long userId;
     private String fullName;
     private Date dob;
     private String gender;
@@ -28,7 +28,7 @@ public class InternProfile implements Serializable {
     public InternProfile() {
     }
 
-    public InternProfile(int profileId, int userId, String fullName, Date dob, String gender, 
+    public InternProfile(int profileId, long userId, String fullName, Date dob, String gender,
                          String phone, String email, String university, String major, 
                          Double gpa, String skills, String status, Timestamp createdAt, Timestamp updatedAt) {
         this.profileId = profileId;
@@ -55,11 +55,11 @@ public class InternProfile implements Serializable {
         this.profileId = profileId;
     }
 
-    public int getUserId() {
+    public long getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(long userId) {
         this.userId = userId;
     }
 

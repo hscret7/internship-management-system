@@ -34,7 +34,7 @@ public class ContractServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("user") : null;
+        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -67,7 +67,7 @@ public class ContractServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("user") : null;
+        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");

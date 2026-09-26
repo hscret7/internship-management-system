@@ -2,33 +2,15 @@
 -- DATABASE SCHEMA: BE2 - HỒ SƠ, TÀI LIỆU VÀ HỢP ĐỒNG
 -- Dự án: Internship Management System
 -- Database: MySQL 8.0+
+-- Chạy database/schema.sql của BE1 trước file này.
 -- ========================================================
 
-CREATE DATABASE IF NOT EXISTS internship_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE internship_db;
-
--- 1. Bảng roles (Hỗ trợ phân quyền)
-CREATE TABLE IF NOT EXISTS roles (
-    role_id INT AUTO_INCREMENT PRIMARY KEY,
-    role_name VARCHAR(50) NOT NULL UNIQUE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 2. Bảng users (Tài khoản người dùng)
-CREATE TABLE IF NOT EXISTS users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    role_id INT NOT NULL,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, INACTIVE, LOCKED
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+USE internship_management;
 
 -- 3. Bảng intern_profiles (BE2 Quản lý: Hồ sơ thực tập sinh)
 CREATE TABLE IF NOT EXISTS intern_profiles (
     profile_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL UNIQUE,
     full_name VARCHAR(100) NOT NULL,
     dob DATE NULL,
     gender VARCHAR(10) NULL,
@@ -50,10 +32,10 @@ CREATE TABLE IF NOT EXISTS intern_profiles (
 -- 4. Bảng applications (Tham chiếu cho Hợp đồng và Đơn ứng tuyển)
 CREATE TABLE IF NOT EXISTS applications (
     application_id INT AUTO_INCREMENT PRIMARY KEY,
-    intern_id INT NOT NULL, -- Tham chiếu tới intern_profiles(profile_id) hoặc users(user_id)
+    intern_id INT NOT NULL, -- Tham chiếu tới intern_profiles(profile_id)
     status VARCHAR(30) DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    reviewed_by INT NULL,
+    reviewed_by BIGINT NULL,
     reviewed_at TIMESTAMP NULL,
     reject_reason TEXT NULL,
     FOREIGN KEY (intern_id) REFERENCES intern_profiles(profile_id) ON DELETE CASCADE,
@@ -83,7 +65,7 @@ CREATE TABLE IF NOT EXISTS contracts (
     file_path VARCHAR(500) NOT NULL,
     file_size BIGINT NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
-    uploaded_by INT NOT NULL, -- user_id của HR upload
+    uploaded_by BIGINT NOT NULL, -- user_id của HR upload
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(30) DEFAULT 'PENDING_CONFIRMATION', -- PENDING_CONFIRMATION, CONFIRMED
     confirmed_at TIMESTAMP NULL,

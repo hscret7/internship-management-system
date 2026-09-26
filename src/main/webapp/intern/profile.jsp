@@ -15,7 +15,7 @@
     <div class="container">
         <a class="navbar-brand fw-bold" href="#"><i class="bi bi-person-badge me-2"></i>Internship Manager</a>
         <div class="d-flex align-items-center text-white">
-            <span class="me-3"><i class="bi bi-person-circle me-1"></i>${sessionScope.user.username} (${sessionScope.user.roleName})</span>
+            <span class="me-3"><i class="bi bi-person-circle me-1"></i>${sessionScope.currentUser.username} (${sessionScope.currentUser.roleName})</span>
             <a href="${pageContext.request.contextPath}/contract/view" class="btn btn-outline-light btn-sm me-2">
                 <i class="bi bi-file-earmark-text me-1"></i>Hợp đồng
             </a>

@@ -29,7 +29,7 @@ public class ContractDAO {
                         updatePs.setString(2, contract.getFilePath());
                         updatePs.setLong(3, contract.getFileSize());
                         updatePs.setString(4, contract.getMimeType());
-                        updatePs.setInt(5, contract.getUploadedBy());
+                        updatePs.setLong(5, contract.getUploadedBy());
                         updatePs.setInt(6, existingId);
                         updatePs.executeUpdate();
                         contract.setContractId(existingId);
@@ -48,7 +48,7 @@ public class ContractDAO {
             ps.setString(3, contract.getFilePath());
             ps.setLong(4, contract.getFileSize());
             ps.setString(5, contract.getMimeType());
-            ps.setInt(6, contract.getUploadedBy());
+            ps.setLong(6, contract.getUploadedBy());
             ps.setString(7, contract.getStatus() != null ? contract.getStatus() : "PENDING_CONFIRMATION");
 
             int rows = ps.executeUpdate();
@@ -146,7 +146,7 @@ public class ContractDAO {
         c.setFilePath(rs.getString("file_path"));
         c.setFileSize(rs.getLong("file_size"));
         c.setMimeType(rs.getString("mime_type"));
-        c.setUploadedBy(rs.getInt("uploaded_by"));
+        c.setUploadedBy(rs.getLong("uploaded_by"));
         c.setUploadedAt(rs.getTimestamp("uploaded_at"));
         c.setStatus(rs.getString("status"));
         c.setConfirmedAt(rs.getTimestamp("confirmed_at"));

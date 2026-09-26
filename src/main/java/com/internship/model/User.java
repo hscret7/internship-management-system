@@ -1,54 +1,44 @@
 package com.internship.model;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
-/**
- * User: Thực thể người dùng trong hệ thống (Đồng bộ với BE1).
- */
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private int userId;
-    private int roleId;
-    private String roleName; // ADMIN, HR, MENTOR, INTERN
+    private long userId;
     private String username;
     private String email;
-    private String status;
+    private String passwordHash;
+    private String fullName;
+    private Role role;
+    private UserStatus status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public User() {
     }
 
-    public User(int userId, int roleId, String roleName, String username, String email, String status) {
+    public User(long userId, String username, String email, String passwordHash,
+                String fullName, Role role, UserStatus status,
+                LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.userId = userId;
-        this.roleId = roleId;
-        this.roleName = roleName;
         this.username = username;
         this.email = email;
+        this.passwordHash = passwordHash;
+        this.fullName = fullName;
+        this.role = role;
         this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
-    public int getUserId() {
+    public long getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(long userId) {
         this.userId = userId;
-    }
-
-    public int getRoleId() {
-        return roleId;
-    }
-
-    public void setRoleId(int roleId) {
-        this.roleId = roleId;
-    }
-
-    public String getRoleName() {
-        return roleName;
-    }
-
-    public void setRoleName(String roleName) {
-        this.roleName = roleName;
     }
 
     public String getUsername() {
@@ -67,23 +57,81 @@ public class User implements Serializable {
         this.email = email;
     }
 
-    public String getStatus() {
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public String getRoleName() {
+        return role == null ? null : role.getRoleName();
+    }
+
+    public UserStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(UserStatus status) {
         this.status = status;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public boolean isHR() {
-        return "HR".equalsIgnoreCase(roleName) || "ADMIN".equalsIgnoreCase(roleName);
+        return "HR".equalsIgnoreCase(getRoleName()) || isAdmin();
     }
 
     public boolean isIntern() {
-        return "INTERN".equalsIgnoreCase(roleName);
+        return "INTERN".equalsIgnoreCase(getRoleName());
     }
 
     public boolean isAdmin() {
-        return "ADMIN".equalsIgnoreCase(roleName);
+        return "ADMIN".equalsIgnoreCase(getRoleName());
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId=" + userId +
+                ", username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", fullName='" + fullName + '\'' +
+                ", role=" + role +
+                ", status=" + status +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
     }
 }
