@@ -14,7 +14,7 @@ public class ProgramEnrollment implements Serializable {
     private int applicationId;     // UNIQUE – mỗi Application tối đa 1 Enrollment
     private int programId;
     private int internProfileId;
-    private String status;         // ACTIVE, COMPLETED, WITHDRAWN
+    private String status;         // ACTIVE, COMPLETED, CANCELLED
     private Timestamp enrolledAt;
     private Timestamp completedAt;
     private Timestamp createdAt;

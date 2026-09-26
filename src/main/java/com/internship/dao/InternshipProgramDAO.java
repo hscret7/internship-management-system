@@ -26,7 +26,7 @@ public class InternshipProgramDAO {
             ps.setDate(4, program.getStartDate());
             ps.setDate(5, program.getEndDate());
             ps.setInt(6, program.getMaxInterns());
-            ps.setString(7, program.getStatus() != null ? program.getStatus() : "ACTIVE");
+            ps.setString(7, program.getStatus() != null ? program.getStatus() : "PLANNED");
             int rows = ps.executeUpdate();
             if (rows > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -81,6 +81,16 @@ public class InternshipProgramDAO {
         return null;
     }
 
+    public void lockProgram(int programId, Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT program_id FROM internship_programs WHERE program_id = ? FOR UPDATE")) {
+            ps.setInt(1, programId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new IllegalStateException("Chương trình thực tập không tồn tại.");
+            }
+        }
+    }
+
     public List<InternshipProgram> getActivePrograms() throws SQLException {
         String sql = """
             SELECT p.*, d.department_name
@@ -120,6 +130,16 @@ public class InternshipProgramDAO {
             ps.setString(7, program.getStatus());
             ps.setInt(8, program.getProgramId());
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean activatePlannedProgram(int programId) throws SQLException {
+        String sql = "UPDATE internship_programs SET status = 'ACTIVE' "
+                + "WHERE program_id = ? AND status = 'PLANNED'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, programId);
+            return ps.executeUpdate() == 1;
         }
     }
 

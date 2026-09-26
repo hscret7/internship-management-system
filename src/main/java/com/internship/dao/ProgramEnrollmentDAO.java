@@ -12,6 +12,27 @@ import java.util.List;
  */
 public class ProgramEnrollmentDAO {
 
+    public void lockInternProfile(int internProfileId, Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT profile_id FROM intern_profiles WHERE profile_id = ? FOR UPDATE")) {
+            ps.setInt(1, internProfileId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new IllegalStateException("Hồ sơ thực tập sinh không tồn tại.");
+            }
+        }
+    }
+
+    public ProgramEnrollment getEnrollmentByIdForUpdate(int enrollmentId, Connection conn)
+            throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT * FROM program_enrollments WHERE enrollment_id = ? FOR UPDATE")) {
+            ps.setInt(1, enrollmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapResultSet(rs) : null;
+            }
+        }
+    }
+
     /**
      * Tạo enrollment mới (trong transaction).
      */

@@ -8,21 +8,22 @@
 </head>
 <body>
 <h1>Quản lý ghi danh & phân mentor</h1>
+<p><a href="${pageContext.request.contextPath}/hr/catalog">Thiết lập phòng ban, chương trình, mentor</a></p>
 
 <c:if test="${not empty successMessage}">
-    <div style="color:green">${successMessage}</div>
+    <div style="color:green"><c:out value="${successMessage}"/></div>
 </c:if>
 <c:if test="${not empty errorMessage}">
-    <div style="color:red">${errorMessage}</div>
+    <div style="color:red"><c:out value="${errorMessage}"/></div>
 </c:if>
 
 <%-- Detail view --%>
 <c:if test="${viewMode == 'detail' and not empty enrollment}">
-    <h2>Enrollment #${enrollment.enrollmentId}</h2>
-    <p>Thực tập sinh: ${enrollment.internName}</p>
-    <p>Chương trình: ${enrollment.programName}</p>
-    <p>Trạng thái: ${enrollment.status}</p>
-    <p>Mentor hiện tại: ${not empty enrollment.currentMentorName ? enrollment.currentMentorName : 'Chưa phân'}</p>
+    <h2>Enrollment #<c:out value="${enrollment.enrollmentId}"/></h2>
+    <p>Thực tập sinh: <c:out value="${enrollment.internName}"/></p>
+    <p>Chương trình: <c:out value="${enrollment.programName}"/></p>
+    <p>Trạng thái: <c:out value="${enrollment.status}"/></p>
+    <p>Mentor hiện tại: <c:out value="${not empty enrollment.currentMentorName ? enrollment.currentMentorName : 'Chưa phân'}"/></p>
 
     <c:if test="${enrollment.status == 'ACTIVE'}">
         <c:choose>
@@ -40,11 +41,11 @@
         <tr><th>Mentor</th><th>Ngày gán</th><th>Ngày kết thúc</th><th>Lý do</th><th>Gán bởi</th></tr>
         <c:forEach var="ma" items="${mentorHistory}">
             <tr>
-                <td>${ma.mentorName}</td>
-                <td>${ma.assignedAt}</td>
-                <td>${ma.endedAt}</td>
-                <td>${ma.endReason}</td>
-                <td>${ma.assignedByName}</td>
+                <td><c:out value="${ma.mentorName}"/></td>
+                <td><c:out value="${ma.assignedAt}"/></td>
+                <td><c:out value="${ma.endedAt}"/></td>
+                <td><c:out value="${ma.endReason}"/></td>
+                <td><c:out value="${ma.assignedByName}"/></td>
             </tr>
         </c:forEach>
     </table>
@@ -55,13 +56,14 @@
 <c:if test="${viewMode == 'enroll-form'}">
     <h2>Ghi danh vào chương trình</h2>
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
+        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="enroll"/>
         <label>Mã đơn (Application ID): <input type="number" name="applicationId" value="${applicationId}" required/></label><br/>
         <label>Chương trình:
             <select name="programId" required>
                 <option value="">-- Chọn --</option>
                 <c:forEach var="prog" items="${programs}">
-                    <option value="${prog.programId}">${prog.programName} (${prog.departmentName})</option>
+                    <option value="${prog.programId}"><c:out value="${prog.programName}"/> (<c:out value="${prog.departmentName}"/>)</option>
                 </c:forEach>
             </select>
         </label><br/>
@@ -72,15 +74,16 @@
 
 <%-- Assign mentor form --%>
 <c:if test="${viewMode == 'assign-form' and not empty enrollment}">
-    <h2>Phân mentor cho ${enrollment.internName}</h2>
+    <h2>Phân mentor cho <c:out value="${enrollment.internName}"/></h2>
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
+        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="assign-mentor"/>
         <input type="hidden" name="enrollmentId" value="${enrollment.enrollmentId}"/>
         <label>Mentor:
             <select name="mentorId" required>
                 <option value="">-- Chọn --</option>
                 <c:forEach var="m" items="${mentors}">
-                    <option value="${m.mentorId}">${m.fullName} (${m.currentMenteeCount}/${m.maxMentees})</option>
+                    <option value="${m.mentorId}"><c:out value="${m.fullName}"/> (${m.currentMenteeCount}/${m.maxMentees})</option>
                 </c:forEach>
             </select>
         </label><br/>
@@ -91,15 +94,16 @@
 
 <%-- Change mentor form --%>
 <c:if test="${viewMode == 'change-form' and not empty enrollment}">
-    <h2>Đổi mentor cho ${enrollment.internName}</h2>
+    <h2>Đổi mentor cho <c:out value="${enrollment.internName}"/></h2>
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
+        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="change-mentor"/>
         <input type="hidden" name="enrollmentId" value="${enrollment.enrollmentId}"/>
         <label>Mentor mới:
             <select name="newMentorId" required>
                 <option value="">-- Chọn --</option>
                 <c:forEach var="m" items="${mentors}">
-                    <option value="${m.mentorId}">${m.fullName} (${m.currentMenteeCount}/${m.maxMentees})</option>
+                    <option value="${m.mentorId}"><c:out value="${m.fullName}"/> (${m.currentMenteeCount}/${m.maxMentees})</option>
                 </c:forEach>
             </select>
         </label><br/>
@@ -121,12 +125,12 @@
         </tr>
         <c:forEach var="e" items="${enrollments}">
             <tr>
-                <td>${e.enrollmentId}</td>
-                <td>${e.internName}</td>
-                <td>${e.programName}</td>
-                <td>${e.status}</td>
-                <td>${not empty e.currentMentorName ? e.currentMentorName : '-'}</td>
-                <td>${e.enrolledAt}</td>
+                <td><c:out value="${e.enrollmentId}"/></td>
+                <td><c:out value="${e.internName}"/></td>
+                <td><c:out value="${e.programName}"/></td>
+                <td><c:out value="${e.status}"/></td>
+                <td><c:out value="${not empty e.currentMentorName ? e.currentMentorName : '-'}"/></td>
+                <td><c:out value="${e.enrolledAt}"/></td>
                 <td>
                     <a href="${pageContext.request.contextPath}/hr/enrollments?action=detail&id=${e.enrollmentId}">Xem</a>
                 </td>

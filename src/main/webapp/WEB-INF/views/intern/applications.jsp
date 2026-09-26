@@ -10,13 +10,14 @@
 <h1>Đơn ứng tuyển của tôi</h1>
 
 <c:if test="${not empty successMessage}">
-    <div style="color:green">${successMessage}</div>
+    <div style="color:green"><c:out value="${successMessage}"/></div>
 </c:if>
 <c:if test="${not empty errorMessage}">
-    <div style="color:red">${errorMessage}</div>
+    <div style="color:red"><c:out value="${errorMessage}"/></div>
 </c:if>
 
 <form method="post" action="${pageContext.request.contextPath}/intern/applications">
+    <input type="hidden" name="csrfToken" value="${csrfToken}"/>
     <button type="submit">Nộp đơn ứng tuyển mới</button>
 </form>
 
@@ -27,12 +28,12 @@
     </tr>
     <c:forEach var="app" items="${applications}">
         <tr>
-            <td>${app.applicationId}</td>
-            <td>${app.status}</td>
-            <td>${app.submittedAt}</td>
-            <td>${app.reviewerName}</td>
-            <td>${app.reviewedAt}</td>
-            <td>${app.rejectReason}</td>
+            <td><c:out value="${app.applicationId}"/></td>
+            <td><c:out value="${app.status}"/></td>
+            <td><c:out value="${app.submittedAt}"/></td>
+            <td><c:out value="${app.reviewerName}"/></td>
+            <td><c:out value="${app.reviewedAt}"/></td>
+            <td><c:out value="${app.rejectReason}"/></td>
         </tr>
     </c:forEach>
 </table>

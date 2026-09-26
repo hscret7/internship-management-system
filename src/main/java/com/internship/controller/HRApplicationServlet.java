@@ -3,7 +3,9 @@ package com.internship.controller;
 import com.internship.model.Application;
 import com.internship.model.User;
 import com.internship.service.ApplicationService;
+import com.internship.service.email.EmailException;
 import com.internship.service.email.SmtpEmailService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -35,7 +37,7 @@ public class HRApplicationServlet extends HttpServlet {
                     "EmailService initialization failed; email notifications disabled.", e);
             applicationService = new ApplicationService(
                     (recipient, subject, content) -> {
-                        LOGGER.warning("Email not sent (service unavailable): " + subject);
+                        throw new EmailException("Email service unavailable", e);
                     });
         }
     }
@@ -64,6 +66,7 @@ public class HRApplicationServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        CsrfToken.expose(request);
 
         try {
             if ("detail".equals(action)) {
@@ -108,9 +111,14 @@ public class HRApplicationServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         User currentUser = (User) request.getSession().getAttribute("currentUser");
         if (currentUser == null || !currentUser.isHR()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
             return;
         }
 

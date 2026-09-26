@@ -11,10 +11,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,12 +36,33 @@ class ApplicationServiceTest {
     // --- Stub implementations ---
 
     static class StubApplicationDAO extends ApplicationDAO {
-        final List<Application> applications = new ArrayList<>();
+        final List<Application> applications = new CopyOnWriteArrayList<>();
         final AtomicInteger nextId = new AtomicInteger(1);
         boolean approveCalled = false;
         boolean rejectCalled = false;
         // If set, approve/reject return false (simulating already-processed)
         boolean simulateAlreadyProcessed = false;
+        StubInternProfileDAO profiles;
+        TestConnections connections;
+        final ReentrantLock profileLock = new ReentrantLock();
+
+        @Override
+        public Integer lockInternProfileId(long userId, Connection conn) {
+            profileLock.lock();
+            connections.onFinish(profileLock::unlock);
+            InternProfile profile = profiles.profile;
+            return profile != null && profile.getUserId() == userId ? profile.getProfileId() : null;
+        }
+
+        @Override
+        public boolean hasPendingApplication(int internId, Connection conn) {
+            return hasPendingApplication(internId);
+        }
+
+        @Override
+        public int createApplication(int internId, Connection conn) {
+            return createApplication(internId);
+        }
 
         @Override
         public boolean hasPendingApplication(int internId) {
@@ -63,6 +90,26 @@ class ApplicationServiceTest {
         }
 
         @Override
+        public boolean approveApplication(int applicationId, long reviewerId, Connection conn) {
+            Application app = getApplicationById(applicationId);
+            if (app == null || !"PENDING".equals(app.getStatus())) return false;
+            app.setStatus("APPROVED");
+            app.setReviewedBy(reviewerId);
+            return true;
+        }
+
+        @Override
+        public boolean rejectApplication(int applicationId, long reviewerId,
+                                         String reason, Connection conn) {
+            Application app = getApplicationById(applicationId);
+            if (app == null || !"PENDING".equals(app.getStatus())) return false;
+            app.setStatus("REJECTED");
+            app.setReviewedBy(reviewerId);
+            app.setRejectReason(reason);
+            return true;
+        }
+
+        @Override
         public List<Application> getApplicationsByInternId(int internId) {
             return applications.stream()
                     .filter(a -> a.getInternId() == internId)
@@ -80,12 +127,6 @@ class ApplicationServiceTest {
         public List<Application> getAllApplications() {
             return new ArrayList<>(applications);
         }
-
-        // These methods require Connection param – we override the service-level methods instead
-        // For unit test, the service calls the Connection-based methods inside a transaction
-        // We need to handle this differently since we can't easily mock Connection.
-        // The service uses DBContext.getConnection() which won't work in tests.
-        // So these tests focus on validation logic, not the transaction flow.
 
         void addApplication(Application app) {
             applications.add(app);
@@ -125,13 +166,17 @@ class ApplicationServiceTest {
     private StubInternProfileDAO profileDAO;
     private StubEmailService emailService;
     private ApplicationService service;
+    private TestConnections connections;
 
     @BeforeEach
     void setUp() {
         appDAO = new StubApplicationDAO();
         profileDAO = new StubInternProfileDAO();
+        appDAO.profiles = profileDAO;
         emailService = new StubEmailService();
-        service = new ApplicationService(appDAO, profileDAO, emailService);
+        connections = new TestConnections();
+        appDAO.connections = connections;
+        service = new ApplicationService(appDAO, profileDAO, emailService, connections);
     }
 
     // ========== Submit Application Tests ==========
@@ -139,6 +184,33 @@ class ApplicationServiceTest {
     @Nested
     @DisplayName("Submit Application")
     class SubmitApplicationTests {
+
+        @Test
+        void concurrentSubmissionsProduceOnePendingApplication() throws Exception {
+            InternProfile profile = new InternProfile();
+            profile.setProfileId(1);
+            profile.setUserId(10L);
+            profileDAO.profile = profile;
+            var pool = Executors.newFixedThreadPool(2);
+            var start = new CountDownLatch(1);
+            try {
+                var first = pool.submit(() -> {
+                    start.await();
+                    try { service.submitApplication(10L); return true; }
+                    catch (IllegalStateException e) { return false; }
+                });
+                var second = pool.submit(() -> {
+                    start.await();
+                    try { service.submitApplication(10L); return true; }
+                    catch (IllegalStateException e) { return false; }
+                });
+                start.countDown();
+                assertNotEquals(first.get(5, TimeUnit.SECONDS), second.get(5, TimeUnit.SECONDS));
+                assertEquals(1, appDAO.applications.size());
+            } finally {
+                pool.shutdownNow();
+            }
+        }
 
         @Test
         @DisplayName("Fails when intern has no profile")
@@ -249,13 +321,7 @@ class ApplicationServiceTest {
         @Test
         @DisplayName("Email service failure is logged but does not throw")
         void emailFailureDoesNotThrow() {
-            // This test verifies that the sendDecisionEmail method
-            // catches exceptions from EmailService.
-            // We test it indirectly through the private method behavior.
-
             emailService.shouldThrow = true;
-
-            // Create an application in the DAO
             Application app = new Application();
             app.setApplicationId(1);
             app.setInternId(1);
@@ -263,19 +329,10 @@ class ApplicationServiceTest {
             app.setInternEmail("test@example.com");
             app.setInternName("Test Intern");
             appDAO.addApplication(app);
-
-            // The service's approve/reject need DB transactions,
-            // so we test email behavior through the public API.
-            // Since we can't mock Connection easily without a framework,
-            // we verify the stub email service behavior directly.
-
-            // Verify that the email service stub works correctly
-            emailService.shouldThrow = false;
-            assertDoesNotThrow(() -> emailService.sendEmail("test@test.com", "Subject", "Body"));
-
-            emailService.shouldThrow = true;
-            assertThrows(RuntimeException.class,
-                    () -> emailService.sendEmail("test@test.com", "Subject", "Body"));
+            assertDoesNotThrow(() -> service.approveApplication(1, 100L));
+            assertEquals("APPROVED", app.getStatus());
+            assertEquals(1, connections.commits.get());
+            assertEquals(0, connections.rollbacks.get());
         }
 
         @Test
@@ -293,6 +350,28 @@ class ApplicationServiceTest {
     @Nested
     @DisplayName("Application Status Rules")
     class StatusRuleTests {
+
+        @Test
+        void decisionCanOnlyBeSavedOnceAndEmailIsNotRepeated() throws SQLException {
+            Application pending = new Application();
+            pending.setApplicationId(1);
+            pending.setInternId(1);
+            pending.setStatus("PENDING");
+            pending.setInternEmail("intern@test.com");
+            pending.setInternName("Intern");
+            appDAO.addApplication(pending);
+
+            service.rejectApplication(1, 100L, "Thiếu tài liệu");
+            assertEquals("REJECTED", pending.getStatus());
+            assertEquals("Thiếu tài liệu", pending.getRejectReason());
+            assertEquals(1, emailService.sentEmails.size());
+            assertEquals(1, connections.commits.get());
+
+            assertThrows(IllegalStateException.class,
+                    () -> service.approveApplication(1, 100L));
+            assertEquals(1, emailService.sentEmails.size());
+            assertEquals(1, connections.rollbacks.get());
+        }
 
         @Test
         @DisplayName("Only PENDING applications can be approved/rejected")

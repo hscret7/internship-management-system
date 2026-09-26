@@ -17,6 +17,11 @@ Chạy theo thứ tự:
 3. `sql/schema_be3.sql` (BE3 – departments, internship_programs, mentors, program_enrollments, mentor_assignments)
 
 > **Lưu ý**: `schema_be3.sql` chỉ tạo bảng mới, KHÔNG chỉnh sửa bảng `applications` hoặc bất kỳ bảng BE1/BE2 nào.
+> Nếu đã chạy bản `schema_be3.sql` cũ, sao lưu DB rồi kiểm tra và chạy một lần
+> `sql/migrate_be3_constraints.sql`. Không chạy migration này trên DB cài mới.
+> Schema mới dùng unique generated columns để chặn Enrollment ACTIVE hoặc mentor
+> hiện hành trùng nhau ngay tại DB. Service còn khóa profile/program/enrollment/mentor
+> trong transaction để giữ sức chứa và trạng thái nhất quán khi có request đồng thời.
 
 ---
 
@@ -57,6 +62,16 @@ Chạy theo thứ tự:
 | **Validation** | Application phải APPROVED; chưa có enrollment; intern chưa có enrollment ACTIVE; program ACTIVE; chưa đầy |
 | **Response** | Redirect → `/hr/enrollments` với session message chứa enrollmentId |
 
+### 3a. Thiết lập danh mục – HR
+
+`GET /hr/catalog` hiển thị phòng ban, chương trình, mentor và tài khoản có role
+`MENTOR`. Các form `POST /hr/catalog` hỗ trợ `create-department`, `create-program`,
+`activate-program`, `create-mentor`. Chương trình mới ở trạng thái `PLANNED`, HR
+phải kích hoạt trước khi ghi danh. Mentor phải là tài khoản `MENTOR` đang hoạt động
+và thuộc cùng phòng ban với chương trình khi phân công.
+
+Các form BE3 dùng token CSRF trong session (`csrfToken`); POST thiếu/sai token trả 403.
+
 ### 4. Mentor Assignment – HR phân mentor
 
 | Thuộc tính | Giá trị |
@@ -65,7 +80,7 @@ Chạy theo thứ tự:
 | **GET Params** | `action=assign-form&enrollmentId=<id>` (form chọn mentor) |
 | **POST Params** | `action=assign-mentor&enrollmentId=<id>&mentorId=<id>` |
 | **Quyền** | HR hoặc ADMIN |
-| **Validation** | Enrollment phải ACTIVE; chưa có mentor hiệu lực; mentor ACTIVE; chưa đạt giới hạn mentee |
+| **Validation** | Enrollment phải ACTIVE; chưa có mentor hiệu lực; mentor và tài khoản MENTOR ACTIVE; cùng phòng ban với chương trình; chưa đạt giới hạn mentee |
 | **Response** | Redirect → `/hr/enrollments` với session message |
 
 ### 5. Mentor Change – HR đổi mentor
@@ -77,7 +92,7 @@ Chạy theo thứ tự:
 | **POST Params** | `action=change-mentor&enrollmentId=<id>&newMentorId=<id>&endReason=<text>` |
 | **Quyền** | HR hoặc ADMIN |
 | **Behavior** | Kết thúc assignment cũ (set ended_at + end_reason), tạo assignment mới. KHÔNG tạo enrollment mới |
-| **Validation** | endReason bắt buộc; mentor mới ACTIVE và chưa đạt giới hạn |
+| **Validation** | Phải có mentor hiện tại; endReason bắt buộc (tối đa 200 ký tự); mentor mới khác mentor cũ, tài khoản MENTOR ACTIVE, cùng phòng ban và chưa đạt giới hạn |
 
 ### 6. Enrollment – HR xem danh sách & chi tiết
 
@@ -124,9 +139,9 @@ if (currentMentor != null) {
 | Entity | Trạng thái | Ghi chú |
 |---|---|---|
 | Application | `PENDING` → `APPROVED` / `REJECTED` | Chỉ PENDING mới xử lý được |
-| ProgramEnrollment | `ACTIVE` → `COMPLETED` / `WITHDRAWN` | Một TTS tối đa 1 ACTIVE |
+| ProgramEnrollment | `ACTIVE` → `COMPLETED` / `CANCELLED` | Một TTS tối đa 1 ACTIVE |
 | MentorAssignment | `ended_at IS NULL` (hiệu lực) / `ended_at IS NOT NULL` (đã kết thúc) | Một enrollment tối đa 1 hiệu lực |
-| InternshipProgram | `ACTIVE` / `INACTIVE` / `COMPLETED` | Chỉ ACTIVE mới nhận ghi danh |
+| InternshipProgram | `PLANNED` / `ACTIVE` / `COMPLETED` / `CANCELLED` | Chỉ ACTIVE mới nhận ghi danh |
 | Mentor | `ACTIVE` / `INACTIVE` | Chỉ ACTIVE mới được phân |
 
 ---
@@ -145,6 +160,7 @@ if (currentMentor != null) {
 
 ```
 sql/schema_be3.sql                                    # Schema BE3
+sql/migrate_be3_constraints.sql                       # Nâng cấp DB đã chạy BE3 cũ; không chạy trên DB mới
 src/main/java/com/internship/
 ├── model/
 │   ├── Application.java                              # Model đơn ứng tuyển
@@ -162,17 +178,23 @@ src/main/java/com/internship/
 │   └── MentorAssignmentDAO.java                      # DAO phân mentor
 ├── service/
 │   ├── ApplicationService.java                       # Nghiệp vụ đơn + email
+│   ├── CatalogService.java                           # Thiết lập danh mục tối thiểu cho HR
 │   └── EnrollmentService.java                        # Nghiệp vụ ghi danh + mentor
+├── util/
+│   ├── ConnectionProvider.java                       # Nguồn kết nối DB, hỗ trợ test
+│   └── CsrfToken.java                                # Token bảo vệ form BE3
 └── controller/
     ├── InternApplicationServlet.java                 # /intern/applications
     ├── HRApplicationServlet.java                     # /hr/applications
     ├── HREnrollmentServlet.java                      # /hr/enrollments
+    ├── HRCatalogServlet.java                         # /hr/catalog
     └── InternEnrollmentServlet.java                  # /intern/enrollment
 src/main/webapp/WEB-INF/views/
 ├── intern/applications.jsp                           # JSP tối thiểu TTS
 ├── intern/enrollment.jsp                             # JSP tối thiểu TTS
 ├── hr/applications.jsp                               # JSP tối thiểu HR
-└── hr/enrollments.jsp                                # JSP tối thiểu HR
+├── hr/enrollments.jsp                                # JSP tối thiểu HR
+└── hr/catalog.jsp                                    # Thiết lập danh mục tối thiểu
 src/test/java/com/internship/service/
 ├── ApplicationServiceTest.java                       # Unit test ApplicationService
 └── EnrollmentServiceTest.java                        # Unit test EnrollmentService
@@ -184,4 +206,24 @@ src/test/java/com/internship/service/
 mvn clean test
 ```
 
-> **Lưu ý**: Các test dùng stub DAO, KHÔNG cần MySQL. Luồng transaction (approve/reject/enroll/assign qua DB thật) chưa kiểm chứng runtime – cần MySQL + Tomcat để test tích hợp.
+> **Lưu ý**: Unit test gọi các Service thực với DAO stub và Connection double;
+> có test hai request đồng thời trên stub. Chúng không thay thế kiểm thử khóa SQL,
+> generated unique columns, servlet/JSP và transaction trên MySQL/Tomcat thật.
+
+## Smoke test trước khi merge
+
+Trên một database test riêng, chạy `database/schema.sql`, `sql/schema_be2.sql`,
+`sql/schema_be3.sql` theo thứ tự và cấu hình `db.properties` local (không commit).
+Đăng nhập bằng tài khoản HR/INTERN/Mentor test và kiểm tra:
+
+1. HR tạo Department, Program PLANNED, kích hoạt Program, thêm Mentor cùng phòng ban ở `/hr/catalog`.
+2. INTERN có profile nộp Application; nộp lần hai khi còn PENDING phải bị chặn.
+3. HR duyệt/từ chối ở `/hr/applications`; thao tác lặp phải bị chặn. Tắt SMTP để
+   xác nhận quyết định vẫn lưu và log ghi lỗi gửi email.
+4. HR ghi danh Application APPROVED vào Program ACTIVE, phân/đổi Mentor.
+   Kiểm tra không tạo hai Enrollment ACTIVE cho một TTS hoặc hai Mentor hiện hành
+   cho một Enrollment, kể cả khi gửi hai request gần như đồng thời.
+5. INTERN chỉ thấy Enrollment của mình; thử POST thiếu/sai `csrfToken` phải trả 403.
+
+Các form tại `/hr/catalog` hiện là giao diện tối thiểu để QA kiểm thử tạo mới và
+kích hoạt. Chỉnh sửa/xóa danh mục và giao diện hoàn chỉnh thuộc đợt tích hợp FE sau.

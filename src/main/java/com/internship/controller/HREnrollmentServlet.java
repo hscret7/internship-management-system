@@ -6,6 +6,7 @@ import com.internship.dao.InternProfileDAO;
 import com.internship.dao.InternshipProgramDAO;
 import com.internship.dao.MentorDAO;
 import com.internship.service.EnrollmentService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -65,6 +66,7 @@ public class HREnrollmentServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        CsrfToken.expose(request);
 
         try {
             if ("detail".equals(action)) {
@@ -74,9 +76,15 @@ public class HREnrollmentServlet extends HttpServlet {
             } else if ("assign-form".equals(action) || "change-form".equals(action)) {
                 handleMentorForm(request, action);
             } else {
-                List<ProgramEnrollment> enrollments = enrollmentService.getAllEnrollments();
-                request.setAttribute("enrollments", enrollments);
-                request.setAttribute("viewMode", "list");
+                loadList(request);
+            }
+        } catch (IllegalArgumentException e) {
+            request.setAttribute("errorMessage", e.getMessage());
+            request.setAttribute("viewMode", "list");
+            try {
+                request.setAttribute("enrollments", enrollmentService.getAllEnrollments());
+            } catch (SQLException loadError) {
+                LOGGER.log(Level.SEVERE, "Error loading enrollment list", loadError);
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error loading enrollment data", e);
@@ -111,9 +119,14 @@ public class HREnrollmentServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         User currentUser = (User) request.getSession().getAttribute("currentUser");
         if (currentUser == null || !currentUser.isHR()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
             return;
         }
 
@@ -177,7 +190,7 @@ public class HREnrollmentServlet extends HttpServlet {
         ProgramEnrollment enrollment = enrollmentService.getEnrollmentById(enrollmentId);
         if (enrollment == null) {
             request.setAttribute("errorMessage", "Không tìm thấy enrollment.");
-            request.setAttribute("viewMode", "list");
+            loadList(request);
             return;
         }
         List<MentorAssignment> history = enrollmentService.getMentorHistory(enrollmentId);
@@ -199,6 +212,11 @@ public class HREnrollmentServlet extends HttpServlet {
     private void handleMentorForm(HttpServletRequest request, String action) throws SQLException {
         int enrollmentId = parseIntParam(request, "enrollmentId");
         ProgramEnrollment enrollment = enrollmentService.getEnrollmentById(enrollmentId);
+        if (enrollment == null) {
+            request.setAttribute("errorMessage", "Không tìm thấy enrollment.");
+            loadList(request);
+            return;
+        }
         List<Mentor> mentors = mentorDAO.getActiveMentors();
         request.setAttribute("enrollment", enrollment);
         request.setAttribute("mentors", mentors);
@@ -206,6 +224,11 @@ public class HREnrollmentServlet extends HttpServlet {
     }
 
     // --- Utility ---
+
+    private void loadList(HttpServletRequest request) throws SQLException {
+        request.setAttribute("enrollments", enrollmentService.getAllEnrollments());
+        request.setAttribute("viewMode", "list");
+    }
 
     private int parseIntParam(HttpServletRequest request, String paramName) {
         String value = request.getParameter(paramName);

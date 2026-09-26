@@ -17,7 +17,7 @@ public class InternshipProgram implements Serializable {
     private Date startDate;
     private Date endDate;
     private int maxInterns;
-    private String status;         // ACTIVE, INACTIVE, COMPLETED
+    private String status;         // PLANNED, ACTIVE, COMPLETED, CANCELLED
     private Timestamp createdAt;
     private Timestamp updatedAt;
 

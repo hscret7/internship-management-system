@@ -10,18 +10,18 @@
 <h1>Chương trình thực tập của tôi</h1>
 
 <c:if test="${not empty errorMessage}">
-    <div style="color:red">${errorMessage}</div>
+    <div style="color:red"><c:out value="${errorMessage}"/></div>
 </c:if>
 
 <c:choose>
     <c:when test="${not empty enrollment}">
-        <h2>Đang tham gia: ${enrollment.programName}</h2>
-        <p>Trạng thái: ${enrollment.status}</p>
-        <p>Ngày ghi danh: ${enrollment.enrolledAt}</p>
+        <h2>Đang tham gia: <c:out value="${enrollment.programName}"/></h2>
+        <p>Trạng thái: <c:out value="${enrollment.status}"/></p>
+        <p>Ngày ghi danh: <c:out value="${enrollment.enrolledAt}"/></p>
 
         <c:if test="${not empty currentMentor}">
-            <h3>Mentor hiện tại: ${currentMentor.mentorName}</h3>
-            <p>Ngày phân công: ${currentMentor.assignedAt}</p>
+            <h3>Mentor hiện tại: <c:out value="${currentMentor.mentorName}"/></h3>
+            <p>Ngày phân công: <c:out value="${currentMentor.assignedAt}"/></p>
         </c:if>
         <c:if test="${empty currentMentor}">
             <p>Chưa được phân mentor.</p>

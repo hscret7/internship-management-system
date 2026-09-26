@@ -6,6 +6,7 @@ import com.internship.model.Application;
 import com.internship.model.InternProfile;
 import com.internship.service.email.EmailService;
 import com.internship.util.DBContext;
+import com.internship.util.ConnectionProvider;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -26,14 +27,13 @@ public class ApplicationService {
     private final ApplicationDAO applicationDAO;
     private final InternProfileDAO internProfileDAO;
     private final EmailService emailService;
+    private final ConnectionProvider connections;
 
     /**
      * Constructor chính – production sử dụng SmtpEmailService.
      */
     public ApplicationService(EmailService emailService) {
-        this.applicationDAO = new ApplicationDAO();
-        this.internProfileDAO = new InternProfileDAO();
-        this.emailService = emailService;
+        this(new ApplicationDAO(), new InternProfileDAO(), emailService, DBContext::getConnection);
     }
 
     /**
@@ -42,9 +42,17 @@ public class ApplicationService {
     public ApplicationService(ApplicationDAO applicationDAO,
                               InternProfileDAO internProfileDAO,
                               EmailService emailService) {
+        this(applicationDAO, internProfileDAO, emailService, DBContext::getConnection);
+    }
+
+    public ApplicationService(ApplicationDAO applicationDAO,
+                              InternProfileDAO internProfileDAO,
+                              EmailService emailService,
+                              ConnectionProvider connections) {
         this.applicationDAO = applicationDAO;
         this.internProfileDAO = internProfileDAO;
         this.emailService = emailService;
+        this.connections = connections;
     }
 
     // ========== TTS: Nộp đơn ứng tuyển ==========
@@ -57,18 +65,28 @@ public class ApplicationService {
      * @throws IllegalStateException nếu chưa có hồ sơ hoặc đã có đơn PENDING
      */
     public int submitApplication(long userId) throws SQLException {
-        // Kiểm tra hồ sơ
-        InternProfile profile = internProfileDAO.getProfileByUserId(userId);
-        if (profile == null) {
-            throw new IllegalStateException("Bạn cần tạo hồ sơ thực tập trước khi nộp đơn.");
+        if (userId <= 0) throw new IllegalArgumentException("Tài khoản không hợp lệ.");
+        try (Connection conn = connections.getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            conn.setAutoCommit(false);
+            try {
+                // Lock the existing profile row so concurrent submissions cannot both pass.
+                Integer profileId = applicationDAO.lockInternProfileId(userId, conn);
+                if (profileId == null) {
+                    throw new IllegalStateException("Bạn cần tạo hồ sơ thực tập trước khi nộp đơn.");
+                }
+                if (applicationDAO.hasPendingApplication(profileId, conn)) {
+                    throw new IllegalStateException("Bạn đã có đơn ứng tuyển đang chờ xét duyệt.");
+                }
+                int id = applicationDAO.createApplication(profileId, conn);
+                if (id <= 0) throw new SQLException("Không thể tạo đơn ứng tuyển.");
+                conn.commit();
+                return id;
+            } catch (SQLException | RuntimeException e) {
+                conn.rollback();
+                throw e;
+            }
         }
-
-        // Kiểm tra đơn PENDING
-        if (applicationDAO.hasPendingApplication(profile.getProfileId())) {
-            throw new IllegalStateException("Bạn đã có đơn ứng tuyển đang chờ xét duyệt.");
-        }
-
-        return applicationDAO.createApplication(profile.getProfileId());
     }
 
     // ========== TTS: Xem đơn của mình ==========
@@ -106,17 +124,16 @@ public class ApplicationService {
      *                               hoặc đã được xử lý bởi request khác
      */
     public void approveApplication(int applicationId, long reviewerId) throws SQLException {
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 boolean updated = applicationDAO.approveApplication(applicationId, reviewerId, conn);
                 if (!updated) {
-                    conn.rollback();
                     throw new IllegalStateException(
                             "Đơn không tồn tại hoặc không còn ở trạng thái PENDING.");
                 }
                 conn.commit();
-            } catch (SQLException e) {
+            } catch (SQLException | RuntimeException e) {
                 conn.rollback();
                 throw e;
             }
@@ -143,18 +160,17 @@ public class ApplicationService {
             throw new IllegalArgumentException("Vui lòng nhập lý do từ chối.");
         }
 
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 boolean updated = applicationDAO.rejectApplication(
                         applicationId, reviewerId, rejectReason.trim(), conn);
                 if (!updated) {
-                    conn.rollback();
                     throw new IllegalStateException(
                             "Đơn không tồn tại hoặc không còn ở trạng thái PENDING.");
                 }
                 conn.commit();
-            } catch (SQLException e) {
+            } catch (SQLException | RuntimeException e) {
                 conn.rollback();
                 throw e;
             }

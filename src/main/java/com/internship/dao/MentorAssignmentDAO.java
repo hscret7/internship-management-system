@@ -51,7 +51,7 @@ public class MentorAssignmentDAO {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, endReason);
             ps.setInt(2, enrollmentId);
-            return ps.executeUpdate() > 0;
+            return ps.executeUpdate() == 1;
         }
     }
 
@@ -77,6 +77,16 @@ public class MentorAssignmentDAO {
             }
         }
         return null;
+    }
+
+    public MentorAssignment getActiveAssignment(int enrollmentId, Connection conn) throws SQLException {
+        String sql = "SELECT * FROM mentor_assignments WHERE enrollment_id = ? AND ended_at IS NULL";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, enrollmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapResultSet(rs) : null;
+            }
+        }
     }
 
     /**

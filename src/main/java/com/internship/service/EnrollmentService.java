@@ -3,6 +3,7 @@ package com.internship.service;
 import com.internship.dao.*;
 import com.internship.model.*;
 import com.internship.util.DBContext;
+import com.internship.util.ConnectionProvider;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -24,13 +25,11 @@ public class EnrollmentService {
     private final MentorAssignmentDAO mentorAssignmentDAO;
     private final InternshipProgramDAO programDAO;
     private final MentorDAO mentorDAO;
+    private final ConnectionProvider connections;
 
     public EnrollmentService() {
-        this.applicationDAO = new ApplicationDAO();
-        this.enrollmentDAO = new ProgramEnrollmentDAO();
-        this.mentorAssignmentDAO = new MentorAssignmentDAO();
-        this.programDAO = new InternshipProgramDAO();
-        this.mentorDAO = new MentorDAO();
+        this(new ApplicationDAO(), new ProgramEnrollmentDAO(), new MentorAssignmentDAO(),
+                new InternshipProgramDAO(), new MentorDAO(), DBContext::getConnection);
     }
 
     /**
@@ -41,11 +40,22 @@ public class EnrollmentService {
                              MentorAssignmentDAO mentorAssignmentDAO,
                              InternshipProgramDAO programDAO,
                              MentorDAO mentorDAO) {
+        this(applicationDAO, enrollmentDAO, mentorAssignmentDAO, programDAO, mentorDAO,
+                DBContext::getConnection);
+    }
+
+    public EnrollmentService(ApplicationDAO applicationDAO,
+                             ProgramEnrollmentDAO enrollmentDAO,
+                             MentorAssignmentDAO mentorAssignmentDAO,
+                             InternshipProgramDAO programDAO,
+                             MentorDAO mentorDAO,
+                             ConnectionProvider connections) {
         this.applicationDAO = applicationDAO;
         this.enrollmentDAO = enrollmentDAO;
         this.mentorAssignmentDAO = mentorAssignmentDAO;
         this.programDAO = programDAO;
         this.mentorDAO = mentorDAO;
+        this.connections = connections;
     }
 
     // ========== Ghi danh TTS vào chương trình ==========
@@ -60,11 +70,12 @@ public class EnrollmentService {
      * @throws IllegalStateException nếu vi phạm nghiệp vụ
      */
     public int enrollIntern(int applicationId, int programId, long hrUserId) throws SQLException {
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             conn.setAutoCommit(false);
             try {
                 // 1. Kiểm tra Application tồn tại và APPROVED
-                Application app = applicationDAO.getApplicationById(applicationId, conn);
+                Application app = applicationDAO.getApplicationByIdForUpdate(applicationId, conn);
                 if (app == null) {
                     throw new IllegalStateException("Đơn ứng tuyển không tồn tại.");
                 }
@@ -73,6 +84,9 @@ public class EnrollmentService {
                             "Chỉ có thể ghi danh đơn đã được duyệt (APPROVED). Trạng thái hiện tại: "
                                     + app.getStatus());
                 }
+
+                // Lock the profile shared by all of this intern's applications.
+                enrollmentDAO.lockInternProfile(app.getInternId(), conn);
 
                 // 2. Kiểm tra Application chưa có Enrollment (UNIQUE)
                 if (enrollmentDAO.hasEnrollmentForApplication(applicationId, conn)) {
@@ -86,6 +100,7 @@ public class EnrollmentService {
                 }
 
                 // 4. Kiểm tra Program tồn tại và ACTIVE
+                programDAO.lockProgram(programId, conn);
                 InternshipProgram program = programDAO.getProgramById(programId, conn);
                 if (program == null) {
                     throw new IllegalStateException("Chương trình thực tập không tồn tại.");
@@ -121,7 +136,7 @@ public class EnrollmentService {
                         + " (enrollmentId=" + enrollmentId + ") by HR userId=" + hrUserId);
                 return enrollmentId;
 
-            } catch (Exception e) {
+            } catch (SQLException | RuntimeException e) {
                 conn.rollback();
                 throw e;
             }
@@ -141,11 +156,12 @@ public class EnrollmentService {
      *                               hoặc enrollment đã có mentor đang hiệu lực
      */
     public int assignMentor(int enrollmentId, int mentorId, long hrUserId) throws SQLException {
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             conn.setAutoCommit(false);
             try {
                 // 1. Kiểm tra enrollment tồn tại và ACTIVE
-                ProgramEnrollment enrollment = enrollmentDAO.getEnrollmentById(enrollmentId, conn);
+                ProgramEnrollment enrollment = enrollmentDAO.getEnrollmentByIdForUpdate(enrollmentId, conn);
                 if (enrollment == null) {
                     throw new IllegalStateException("Enrollment không tồn tại.");
                 }
@@ -160,6 +176,7 @@ public class EnrollmentService {
                 }
 
                 // 3. Kiểm tra mentor tồn tại và ACTIVE
+                mentorDAO.lockMentor(mentorId, conn);
                 Mentor mentor = mentorDAO.getMentorById(mentorId, conn);
                 if (mentor == null) {
                     throw new IllegalStateException("Mentor không tồn tại.");
@@ -167,6 +184,7 @@ public class EnrollmentService {
                 if (!"ACTIVE".equals(mentor.getStatus())) {
                     throw new IllegalStateException("Mentor không ở trạng thái hoạt động.");
                 }
+                requireMatchingDepartment(enrollment, mentor, conn);
 
                 // 4. Kiểm tra giới hạn mentee
                 if (mentor.getCurrentMenteeCount() >= mentor.getMaxMentees()) {
@@ -192,7 +210,7 @@ public class EnrollmentService {
                         + ") by HR userId=" + hrUserId);
                 return assignmentId;
 
-            } catch (Exception e) {
+            } catch (SQLException | RuntimeException e) {
                 conn.rollback();
                 throw e;
             }
@@ -216,12 +234,16 @@ public class EnrollmentService {
         if (endReason == null || endReason.isBlank()) {
             throw new IllegalArgumentException("Vui lòng nhập lý do đổi mentor.");
         }
+        if (endReason.trim().length() > 200) {
+            throw new IllegalArgumentException("Lý do đổi mentor vượt quá 200 ký tự.");
+        }
 
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             conn.setAutoCommit(false);
             try {
                 // 1. Kiểm tra enrollment
-                ProgramEnrollment enrollment = enrollmentDAO.getEnrollmentById(enrollmentId, conn);
+                ProgramEnrollment enrollment = enrollmentDAO.getEnrollmentByIdForUpdate(enrollmentId, conn);
                 if (enrollment == null) {
                     throw new IllegalStateException("Enrollment không tồn tại.");
                 }
@@ -229,10 +251,16 @@ public class EnrollmentService {
                     throw new IllegalStateException("Enrollment không ở trạng thái ACTIVE.");
                 }
 
-                // 2. Kết thúc assignment hiện tại
-                mentorAssignmentDAO.endActiveAssignment(enrollmentId, endReason.trim(), conn);
+                MentorAssignment oldAssignment = mentorAssignmentDAO.getActiveAssignment(enrollmentId, conn);
+                if (oldAssignment == null) {
+                    throw new IllegalStateException("Enrollment chưa có mentor để đổi.");
+                }
+                if (oldAssignment.getMentorId() == newMentorId) {
+                    throw new IllegalArgumentException("Mentor mới phải khác mentor hiện tại.");
+                }
 
-                // 3. Kiểm tra mentor mới
+                // 3. Kiểm tra mentor mới trước khi kết thúc assignment cũ.
+                mentorDAO.lockMentor(newMentorId, conn);
                 Mentor newMentor = mentorDAO.getMentorById(newMentorId, conn);
                 if (newMentor == null) {
                     throw new IllegalStateException("Mentor mới không tồn tại.");
@@ -240,9 +268,14 @@ public class EnrollmentService {
                 if (!"ACTIVE".equals(newMentor.getStatus())) {
                     throw new IllegalStateException("Mentor mới không ở trạng thái hoạt động.");
                 }
+                requireMatchingDepartment(enrollment, newMentor, conn);
                 if (newMentor.getCurrentMenteeCount() >= newMentor.getMaxMentees()) {
                     throw new IllegalStateException(
                             "Mentor mới đã đạt giới hạn số lượng mentee.");
+                }
+
+                if (!mentorAssignmentDAO.endActiveAssignment(enrollmentId, endReason.trim(), conn)) {
+                    throw new IllegalStateException("Mentor hiện tại đã thay đổi. Vui lòng tải lại trang.");
                 }
 
                 // 4. Tạo assignment mới
@@ -258,11 +291,10 @@ public class EnrollmentService {
 
                 conn.commit();
                 LOGGER.info("Changed mentor for enrollment " + enrollmentId
-                        + " to mentor " + newMentorId
-                        + " (reason: " + endReason + ") by HR userId=" + hrUserId);
+                        + " to mentor " + newMentorId + " by HR userId=" + hrUserId);
                 return assignmentId;
 
-            } catch (Exception e) {
+            } catch (SQLException | RuntimeException e) {
                 conn.rollback();
                 throw e;
             }
@@ -297,5 +329,14 @@ public class EnrollmentService {
 
     public List<MentorAssignment> getMentorHistory(int enrollmentId) throws SQLException {
         return mentorAssignmentDAO.getAssignmentHistory(enrollmentId);
+    }
+
+    private void requireMatchingDepartment(ProgramEnrollment enrollment, Mentor mentor,
+                                           Connection conn) throws SQLException {
+        InternshipProgram program = programDAO.getProgramById(enrollment.getProgramId(), conn);
+        if (program == null || mentor.getDepartmentId() == null
+                || mentor.getDepartmentId() != program.getDepartmentId()) {
+            throw new IllegalStateException("Mentor phải thuộc phòng ban của chương trình.");
+        }
     }
 }

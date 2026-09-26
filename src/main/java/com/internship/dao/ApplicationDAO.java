@@ -42,6 +42,27 @@ public class ApplicationDAO {
         }
     }
 
+    /** Serializes submissions for the same profile before checking PENDING applications. */
+    public Integer lockInternProfileId(long userId, Connection conn) throws SQLException {
+        String sql = "SELECT profile_id FROM intern_profiles WHERE user_id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
+    public boolean hasPendingApplication(int internId, Connection conn) throws SQLException {
+        String sql = "SELECT application_id FROM applications WHERE intern_id = ? AND status = 'PENDING' LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, internId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     /**
      * Lấy Application theo ID.
      */
@@ -87,6 +108,17 @@ public class ApplicationDAO {
             }
         }
         return null;
+    }
+
+    public Application getApplicationByIdForUpdate(int applicationId, Connection conn)
+            throws SQLException {
+        String sql = "SELECT * FROM applications WHERE application_id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, applicationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapResultSet(rs) : null;
+            }
+        }
     }
 
     /**

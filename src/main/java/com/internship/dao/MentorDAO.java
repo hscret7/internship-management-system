@@ -12,22 +12,34 @@ import java.util.List;
  */
 public class MentorDAO {
 
+    public void lockMentor(int mentorId, Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT mentor_id FROM mentors WHERE mentor_id = ? FOR UPDATE")) {
+            ps.setInt(1, mentorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new IllegalStateException("Mentor không tồn tại.");
+            }
+        }
+    }
+
     public int createMentor(Mentor mentor) throws SQLException {
         String sql = """
             INSERT INTO mentors (user_id, department_id, specialization, max_mentees, status)
-            VALUES (?, ?, ?, ?, ?)
+            SELECT u.user_id, ?, ?, ?, ? FROM users u
+            JOIN roles r ON r.role_id = u.role_id
+            WHERE u.user_id = ? AND u.status = 'ACTIVE' AND r.role_name = 'MENTOR'
             """;
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setLong(1, mentor.getUserId());
             if (mentor.getDepartmentId() != null) {
-                ps.setInt(2, mentor.getDepartmentId());
+                ps.setInt(1, mentor.getDepartmentId());
             } else {
-                ps.setNull(2, Types.INTEGER);
+                ps.setNull(1, Types.INTEGER);
             }
-            ps.setString(3, mentor.getSpecialization());
-            ps.setInt(4, mentor.getMaxMentees());
-            ps.setString(5, mentor.getStatus() != null ? mentor.getStatus() : "ACTIVE");
+            ps.setString(2, mentor.getSpecialization());
+            ps.setInt(3, mentor.getMaxMentees());
+            ps.setString(4, mentor.getStatus() != null ? mentor.getStatus() : "ACTIVE");
+            ps.setLong(5, mentor.getUserId());
             int rows = ps.executeUpdate();
             if (rows > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -46,11 +58,14 @@ public class MentorDAO {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
                    (SELECT COUNT(*) FROM mentor_assignments ma
-                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL) AS current_mentee_count
+                    JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
+                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
+                    AND pe.status = 'ACTIVE') AS current_mentee_count
             FROM mentors m
             JOIN users u ON m.user_id = u.user_id
+            JOIN roles r ON u.role_id = r.role_id
             LEFT JOIN departments d ON m.department_id = d.department_id
-            WHERE m.mentor_id = ?
+            WHERE m.mentor_id = ? AND u.status = 'ACTIVE' AND r.role_name = 'MENTOR'
             """;
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -71,11 +86,14 @@ public class MentorDAO {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
                    (SELECT COUNT(*) FROM mentor_assignments ma
-                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL) AS current_mentee_count
+                    JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
+                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
+                    AND pe.status = 'ACTIVE') AS current_mentee_count
             FROM mentors m
             JOIN users u ON m.user_id = u.user_id
+            JOIN roles r ON u.role_id = r.role_id
             LEFT JOIN departments d ON m.department_id = d.department_id
-            WHERE m.mentor_id = ?
+            WHERE m.mentor_id = ? AND u.status = 'ACTIVE' AND r.role_name = 'MENTOR'
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, mentorId);
@@ -92,11 +110,14 @@ public class MentorDAO {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
                    (SELECT COUNT(*) FROM mentor_assignments ma
-                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL) AS current_mentee_count
+                    JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
+                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
+                    AND pe.status = 'ACTIVE') AS current_mentee_count
             FROM mentors m
             JOIN users u ON m.user_id = u.user_id
+            JOIN roles r ON u.role_id = r.role_id
             LEFT JOIN departments d ON m.department_id = d.department_id
-            WHERE m.status = 'ACTIVE'
+            WHERE m.status = 'ACTIVE' AND u.status = 'ACTIVE' AND r.role_name = 'MENTOR'
             ORDER BY u.full_name
             """;
         return executeListQuery(sql);
@@ -106,7 +127,9 @@ public class MentorDAO {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
                    (SELECT COUNT(*) FROM mentor_assignments ma
-                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL) AS current_mentee_count
+                    JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
+                    WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
+                    AND pe.status = 'ACTIVE') AS current_mentee_count
             FROM mentors m
             JOIN users u ON m.user_id = u.user_id
             LEFT JOIN departments d ON m.department_id = d.department_id

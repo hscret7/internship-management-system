@@ -3,7 +3,9 @@ package com.internship.controller;
 import com.internship.model.Application;
 import com.internship.model.User;
 import com.internship.service.ApplicationService;
+import com.internship.service.email.EmailException;
 import com.internship.service.email.SmtpEmailService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -36,7 +38,7 @@ public class InternApplicationServlet extends HttpServlet {
                     "EmailService initialization failed; email notifications disabled.", e);
             applicationService = new ApplicationService(
                     (recipient, subject, content) -> {
-                        LOGGER.warning("Email not sent (service unavailable): " + subject);
+                        throw new EmailException("Email service unavailable", e);
                     });
         }
     }
@@ -67,6 +69,16 @@ public class InternApplicationServlet extends HttpServlet {
             request.setAttribute("errorMessage", "Lỗi tải danh sách đơn ứng tuyển.");
         }
 
+        var session = request.getSession();
+        for (String key : List.of("successMessage", "errorMessage")) {
+            Object message = session.getAttribute(key);
+            if (message != null) {
+                request.setAttribute(key, message);
+                session.removeAttribute(key);
+            }
+        }
+        CsrfToken.expose(request);
+
         request.getRequestDispatcher("/WEB-INF/views/intern/applications.jsp")
                 .forward(request, response);
     }
@@ -83,9 +95,14 @@ public class InternApplicationServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         User currentUser = (User) request.getSession().getAttribute("currentUser");
         if (currentUser == null || !currentUser.isIntern()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
             return;
         }
 
