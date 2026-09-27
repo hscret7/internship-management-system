@@ -3,6 +3,7 @@ package com.internship.controller;
 import com.internship.model.User;
 import com.internship.service.CatalogService;
 import com.internship.util.CsrfToken;
+import com.internship.util.UserRoleChecks;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -97,7 +98,7 @@ public class HRCatalogServlet extends HttpServlet {
     private boolean isHR(HttpServletRequest request) {
         Object user = request.getSession(false) == null ? null
                 : request.getSession(false).getAttribute("currentUser");
-        return user instanceof User currentUser && currentUser.isHR();
+        return user instanceof User currentUser && UserRoleChecks.canManageHr(currentUser);
     }
 
     private int positiveInt(HttpServletRequest request, String name) {

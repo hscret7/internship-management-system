@@ -6,6 +6,7 @@ import com.internship.model.User;
 import com.internship.dao.InternProfileDAO;
 import com.internship.model.InternProfile;
 import com.internship.service.EnrollmentService;
+import com.internship.util.UserRoleChecks;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -46,7 +47,7 @@ public class InternEnrollmentServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User currentUser = (User) request.getSession().getAttribute("currentUser");
-        if (currentUser == null || !currentUser.isIntern()) {
+        if (!UserRoleChecks.isIntern(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }

@@ -6,6 +6,7 @@ import com.internship.service.ApplicationService;
 import com.internship.service.email.EmailException;
 import com.internship.service.email.SmtpEmailService;
 import com.internship.util.CsrfToken;
+import com.internship.util.UserRoleChecks;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -60,7 +61,7 @@ public class HRApplicationServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User currentUser = (User) request.getSession().getAttribute("currentUser");
-        if (currentUser == null || !currentUser.isHR()) {
+        if (!UserRoleChecks.canManageHr(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
@@ -113,7 +114,7 @@ public class HRApplicationServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         User currentUser = (User) request.getSession().getAttribute("currentUser");
-        if (currentUser == null || !currentUser.isHR()) {
+        if (!UserRoleChecks.canManageHr(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
