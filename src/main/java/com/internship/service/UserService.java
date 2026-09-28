@@ -1,6 +1,10 @@
 package com.internship.service;
 
+import java.security.SecureRandom;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.internship.dao.RoleDAO;
 import com.internship.dao.UserDAO;
 import com.internship.model.Role;
@@ -10,20 +14,16 @@ import com.internship.service.email.EmailException;
 import com.internship.service.email.EmailService;
 import com.internship.util.PasswordUtil;
 
-import java.security.SecureRandom;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class UserService {
 
-    private static final Logger LOGGER =
-            Logger.getLogger(UserService.class.getName());
+    private static final Logger LOGGER
+            = Logger.getLogger(UserService.class.getName());
 
-    private static final String PASSWORD_CHARS =
-            "ABCDEFGHJKLMNPQRSTUVWXYZ" +
-            "abcdefghijkmnopqrstuvwxyz" +
-            "23456789" +
-            "!@#$%";
+    private static final String PASSWORD_CHARS
+            = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+            + "abcdefghijkmnopqrstuvwxyz"
+            + "23456789"
+            + "!@#$%";
 
     private static final int TEMP_PASSWORD_LENGTH = 10;
 
@@ -121,10 +121,10 @@ public class UserService {
                         Level.WARNING,
                         "Failed to send account creation email to user {0} ({1}): [{2}] {3}",
                         new Object[]{
-                                normalizedUsername,
-                                normalizedEmail,
-                                e.getClass().getSimpleName(),
-                                e.getMessage()
+                            normalizedUsername,
+                            normalizedEmail,
+                            e.getClass().getSimpleName(),
+                            e.getMessage()
                         }
                 );
                 emailSent = false;
@@ -139,6 +139,98 @@ public class UserService {
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "Unable to create user because of a database error.",
+                    e
+            );
+        }
+    }
+
+    public User registerIntern(
+            String username,
+            String email,
+            String fullName,
+            String password,
+            String confirmPassword
+    ) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Tên đăng nhập không được để trống."
+            );
+        }
+
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Email không được để trống."
+            );
+        }
+
+        if (!email.contains("@")) {
+            throw new IllegalArgumentException(
+                    "Email không hợp lệ."
+            );
+        }
+
+        if (fullName == null || fullName.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Họ tên không được để trống."
+            );
+        }
+
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException(
+                    "Mật khẩu phải có ít nhất 8 ký tự."
+            );
+        }
+
+        if (!password.equals(confirmPassword)) {
+            throw new IllegalArgumentException(
+                    "Mật khẩu xác nhận không khớp."
+            );
+        }
+
+        String normalizedUsername = username.trim();
+        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedFullName = fullName.trim();
+
+        try {
+            if (userDAO.existsByUsername(normalizedUsername)) {
+                throw new IllegalArgumentException(
+                        "Tên đăng nhập đã tồn tại."
+                );
+            }
+
+            if (userDAO.existsByEmail(normalizedEmail)) {
+                throw new IllegalArgumentException(
+                        "Email đã tồn tại."
+                );
+            }
+
+            // Public registration luôn do server gán INTERN.
+            Role internRole = roleDAO.findByName("INTERN");
+
+            if (internRole == null) {
+                throw new IllegalStateException(
+                        "INTERN role is not configured."
+                );
+            }
+
+            User user = new User();
+            user.setUsername(normalizedUsername);
+            user.setEmail(normalizedEmail);
+            user.setFullName(normalizedFullName);
+            user.setPasswordHash(
+                    PasswordUtil.hashPassword(password)
+            );
+            user.setRole(internRole);
+            user.setStatus(UserStatus.ACTIVE);
+
+            long userId = userDAO.create(user);
+            user.setUserId(userId);
+
+            return user;
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Unable to register intern because of a database error.",
                     e
             );
         }
@@ -224,6 +316,7 @@ public class UserService {
             User user,
             String temporaryPassword,
             boolean emailSent
-    ) {
+            ) {
+
     }
 }

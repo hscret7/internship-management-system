@@ -1,5 +1,5 @@
-# INTERNSHIP MANAGEMENT SYSTEM - BE1 + BE2 INTEGRATION
-> Nhánh tích hợp nền tảng đăng nhập/phân quyền của BE1 với hồ sơ, tài liệu và hợp đồng của BE2. Chưa gồm chức năng nộp hoặc duyệt Application của BE3.
+# INTERNSHIP MANAGEMENT SYSTEM - BE1 + BE2 + BE3
+> Nền tảng đăng nhập/phân quyền của BE1, hồ sơ/tài liệu/hợp đồng của BE2, và đơn ứng tuyển/ghi danh/phân mentor của BE3. Xem [hợp đồng API BE3](docs/BE3_API_CONTRACT.md) để biết luồng và đường dẫn chi tiết.
 
 ---
 
@@ -29,11 +29,12 @@
 
 ### 2.1. Cấu hình Cơ sở dữ liệu (MySQL)
 1. Mở MySQL Workbench hoặc phpMyAdmin (localhost:8080).
-2. Trên database test mới, chạy lần lượt 3 file SQL:
+2. Trên database test mới, chạy lần lượt các file SQL:
    - `database/schema.sql`: Tạo database `internship_management`, `roles`, `users` của BE1.
    - `sql/schema_be2.sql`: Thêm `intern_profiles`, `applications`, `documents`, `contracts` của BE2.
-   - `sql/seed_data_qa.sql`: Nạp tài khoản và dữ liệu mẫu chỉ để kiểm thử local.
-3. Sao chép `src/main/resources/db.properties.example` thành `src/main/resources/db.properties`, rồi sửa host/port/tài khoản/mật khẩu MySQL của máy bạn. File `db.properties` chỉ lưu local, tuyệt đối không commit. BE2 DAO cũng dùng cấu hình này qua `DBContext`.
+   - `sql/schema_be3.sql`: Thêm phòng ban, chương trình, mentor, ghi danh và lịch sử phân mentor của BE3.
+   - `sql/seed_data_qa.sql` (tùy chọn): Nạp dữ liệu mẫu chỉ để kiểm thử local.
+3. Sao chép `src/main/resources/db.properties.example` thành `src/main/resources/db.properties`, rồi sửa host/port/tài khoản/mật khẩu MySQL của máy bạn. File `db.properties` chỉ lưu local, tuyệt đối không commit. Các DAO dùng cấu hình này qua `DBContext`.
 
 ### 2.2. Build và Run với Apache Tomcat 10.1
 - Dự án quản lý bằng **Maven**:

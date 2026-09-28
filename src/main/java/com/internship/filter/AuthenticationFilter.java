@@ -37,6 +37,7 @@ public class AuthenticationFilter implements Filter {
 
         boolean publicRequest =
                 path.equals("/auth/login")
+                || path.equals("/auth/register")
                 || path.startsWith("/assets/")
                 || path.equals("/favicon.ico");
 

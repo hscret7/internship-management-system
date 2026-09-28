@@ -108,7 +108,7 @@ public class DocumentService {
     /**
      * Lưu hợp đồng (HR upload) theo US9.
      */
-    public Contract saveContract(int applicationId, long hrUserId, Part filePart, String baseUploadDir)
+    public Contract saveContract(int applicationId, long hrUserId, Part filePart, String baseUploadDir) 
             throws IllegalArgumentException, IOException, SQLException {
         validateFile(filePart);
 
@@ -165,11 +165,11 @@ public class DocumentService {
             return false;
         }
 
-        if (currentUser.isHR() || currentUser.isAdmin()) {
+        if (isHR(currentUser) || isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.isIntern()) {
+        if (isIntern(currentUser)) {
             InternProfile userProfile = profileDAO.getProfileByUserId(currentUser.getUserId());
             return userProfile != null && userProfile.getProfileId() == document.getProfileId();
         }
@@ -186,11 +186,11 @@ public class DocumentService {
             return false;
         }
 
-        if (currentUser.isHR() || currentUser.isAdmin()) {
+        if (isHR(currentUser) || isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.isIntern()) {
+        if (isIntern(currentUser)) {
             InternProfile userProfile = profileDAO.getProfileByUserId(currentUser.getUserId());
             if (userProfile == null) return false;
             Contract userContract = contractDAO.getContractByProfileId(userProfile.getProfileId());
@@ -198,6 +198,28 @@ public class DocumentService {
         }
 
         return false;
+    }
+
+    public static boolean isHR(User user) {
+        if (user == null || user.getRole() == null || user.getRole().getRoleName() == null) {
+            return false;
+        }
+        String role = user.getRole().getRoleName().trim().toUpperCase();
+        return "HR".equals(role) || "ADMIN".equals(role);
+    }
+
+    public static boolean isAdmin(User user) {
+        if (user == null || user.getRole() == null || user.getRole().getRoleName() == null) {
+            return false;
+        }
+        return "ADMIN".equalsIgnoreCase(user.getRole().getRoleName().trim());
+    }
+
+    public static boolean isIntern(User user) {
+        if (user == null || user.getRole() == null || user.getRole().getRoleName() == null) {
+            return false;
+        }
+        return "INTERN".equalsIgnoreCase(user.getRole().getRoleName().trim());
     }
 
     public Document getDocumentById(int documentId) throws SQLException {

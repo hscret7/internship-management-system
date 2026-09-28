@@ -2,7 +2,6 @@
 -- SEED DATA DÀNH CHO QA TEST (BE2 - HỒ SƠ, TÀI LIỆU, HỢP ĐỒNG)
 -- ========================================================
 
--- Chạy database/schema.sql rồi sql/schema_be2.sql trước file này.
 USE internship_management;
 
 -- 1. Thêm Roles
@@ -13,12 +12,13 @@ INSERT INTO roles (role_id, role_name) VALUES
 (4, 'INTERN')
 ON DUPLICATE KEY UPDATE role_name=VALUES(role_name);
 
--- 2. Tài khoản chỉ dành cho môi trường QA (mật khẩu thử: 123456, BCrypt).
-INSERT INTO users (user_id, role_id, username, password_hash, full_name, email, status) VALUES
-(1, 2, 'hr_lan', '$2a$10$PaO4UQwqJW1kd4izNQuVQuUuOvMsPfse/qa8vSVkPqL4fS2EMsbxq', 'HR Lan', 'hr_lan@company.com', 'ACTIVE'),
-(2, 4, 'intern_nam', '$2a$10$PaO4UQwqJW1kd4izNQuVQuUuOvMsPfse/qa8vSVkPqL4fS2EMsbxq', 'Nguyễn Văn Nam', 'nam.nv@student.edu.vn', 'ACTIVE'),
-(3, 4, 'intern_hoa', '$2a$10$PaO4UQwqJW1kd4izNQuVQuUuOvMsPfse/qa8vSVkPqL4fS2EMsbxq', 'Trần Thị Hoa', 'hoa.tt@student.edu.vn', 'ACTIVE'),
-(4, 4, 'intern_tuan', '$2a$10$PaO4UQwqJW1kd4izNQuVQuUuOvMsPfse/qa8vSVkPqL4fS2EMsbxq', 'Lê Văn Tuấn', 'tuan.lv@student.edu.vn', 'ACTIVE')
+-- 2. Thêm Users mẫu (Mật khẩu mặc định: '123456' đã hash bằng BCrypt hoặc plain test)
+-- Hash $2a$10$wT3wYy5/1.yq17B9P8P5l.3b6k9lB/6Qy30uP9s5vB.hG0cO24dty tương đương "123456"
+INSERT INTO users (user_id, role_id, username, password_hash, email, status) VALUES
+(1, 2, 'hr_lan', '$2a$10$e7mE5aLwZgNlPjH/1l0bK.w7FzOeqxH60BkW9u1N9PZ7s4G1aM9bS', 'hr_lan@company.com', 'ACTIVE'),
+(2, 4, 'intern_nam', '$2a$10$e7mE5aLwZgNlPjH/1l0bK.w7FzOeqxH60BkW9u1N9PZ7s4G1aM9bS', 'nam.nv@student.edu.vn', 'ACTIVE'),
+(3, 4, 'intern_hoa', '$2a$10$e7mE5aLwZgNlPjH/1l0bK.w7FzOeqxH60BkW9u1N9PZ7s4G1aM9bS', 'hoa.tt@student.edu.vn', 'ACTIVE'),
+(4, 4, 'intern_tuan', '$2a$10$e7mE5aLwZgNlPjH/1l0bK.w7FzOeqxH60BkW9u1N9PZ7s4G1aM9bS', 'tuan.lv@student.edu.vn', 'ACTIVE')
 ON DUPLICATE KEY UPDATE username=VALUES(username);
 
 -- 3. Thêm Intern Profiles mẫu

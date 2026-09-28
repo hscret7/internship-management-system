@@ -42,10 +42,9 @@ public class LoginServlet extends HttpServlet {
         }
 
         request.getRequestDispatcher(
-                "/WEB-INF/views/auth/login.jsp"
+                "/login.jsp"
         ).forward(request, response);
     }
-
     @Override
     protected void doPost(
             HttpServletRequest request,
@@ -81,9 +80,8 @@ public class LoginServlet extends HttpServlet {
                 );
 
                 request.getRequestDispatcher(
-                        "/WEB-INF/views/auth/login.jsp"
+                        "/login.jsp"
                 ).forward(request, response);
-
                 return;
             }
 

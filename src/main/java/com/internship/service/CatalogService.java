@@ -71,7 +71,8 @@ public class CatalogService {
     public int createMentor(long userId, int departmentId, String specialization,
                             int maxMentees) throws SQLException {
         User user = users.findById(userId);
-        if (user == null || !"MENTOR".equals(user.getRoleName())
+        if (user == null || user.getRole() == null
+                || !"MENTOR".equals(user.getRole().getRoleName())
                 || user.getStatus() != UserStatus.ACTIVE) {
             throw new IllegalArgumentException("Tài khoản phải có role MENTOR và đang hoạt động.");
         }
@@ -107,7 +108,8 @@ public class CatalogService {
 
     public List<User> getEligibleMentorUsers() throws SQLException {
         return users.findAll().stream()
-                .filter(user -> "MENTOR".equals(user.getRoleName())
+                .filter(user -> user != null && user.getRole() != null
+                        && "MENTOR".equals(user.getRole().getRoleName())
                         && user.getStatus() == UserStatus.ACTIVE)
                 .toList();
     }

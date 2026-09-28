@@ -28,7 +28,7 @@ public class InternProfile implements Serializable {
     public InternProfile() {
     }
 
-    public InternProfile(int profileId, long userId, String fullName, Date dob, String gender,
+    public InternProfile(int profileId, long userId, String fullName, Date dob, String gender, 
                          String phone, String email, String university, String major, 
                          Double gpa, String skills, String status, Timestamp createdAt, Timestamp updatedAt) {
         this.profileId = profileId;

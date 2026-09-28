@@ -15,7 +15,7 @@
     <div class="container">
         <a class="navbar-brand fw-bold" href="#"><i class="bi bi-buildings me-2"></i>HR Portal - Internship Manager</a>
         <div class="d-flex align-items-center text-white">
-            <span class="me-3"><i class="bi bi-person-circle me-1"></i>${sessionScope.currentUser.username} (${sessionScope.currentUser.roleName})</span>
+            <span class="me-3"><i class="bi bi-person-circle me-1"></i>${not empty sessionScope.currentUser ? sessionScope.currentUser.username : sessionScope.user.username} (${not empty sessionScope.currentUser ? sessionScope.currentUser.role.roleName : sessionScope.user.roleName})</span>
             <a href="${pageContext.request.contextPath}/auth/logout" class="btn btn-outline-danger btn-sm">
                 <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
             </a>

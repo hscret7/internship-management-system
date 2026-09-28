@@ -43,7 +43,13 @@ public class InternProfileServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -81,7 +87,13 @@ public class InternProfileServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -130,7 +142,7 @@ public class InternProfileServlet extends HttpServlet {
      */
     private void handleListAndSearchProfiles(HttpServletRequest request, HttpServletResponse response, User currentUser)
             throws SQLException, ServletException, IOException {
-        if (!currentUser.isHR() && !currentUser.isAdmin()) {
+        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập chức năng này.");
             return;
         }
@@ -154,7 +166,7 @@ public class InternProfileServlet extends HttpServlet {
      */
     private void handleViewProfileDetail(HttpServletRequest request, HttpServletResponse response, User currentUser)
             throws SQLException, ServletException, IOException {
-        if (!currentUser.isHR() && !currentUser.isAdmin()) {
+        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem chi tiết hồ sơ.");
             return;
         }
@@ -244,7 +256,7 @@ public class InternProfileServlet extends HttpServlet {
      */
     private void handleUpdateStatus(HttpServletRequest request, HttpServletResponse response, User currentUser)
             throws SQLException, IOException {
-        if (!currentUser.isHR() && !currentUser.isAdmin()) {
+        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }

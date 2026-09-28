@@ -1,27 +1,35 @@
 package com.internship.model;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class User implements Serializable {
-    private static final long serialVersionUID = 1L;
+public class User {
 
     private long userId;
     private String username;
     private String email;
     private String passwordHash;
     private String fullName;
+
     private Role role;
     private UserStatus status;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public User() {
     }
 
-    public User(long userId, String username, String email, String passwordHash,
-                String fullName, Role role, UserStatus status,
-                LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(
+            long userId,
+            String username,
+            String email,
+            String passwordHash,
+            String fullName,
+            Role role,
+            UserStatus status,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         this.userId = userId;
         this.username = username;
         this.email = email;
@@ -81,10 +89,6 @@ public class User implements Serializable {
         this.role = role;
     }
 
-    public String getRoleName() {
-        return role == null ? null : role.getRoleName();
-    }
-
     public UserStatus getStatus() {
         return status;
     }
@@ -107,18 +111,6 @@ public class User implements Serializable {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public boolean isHR() {
-        return "HR".equalsIgnoreCase(getRoleName()) || isAdmin();
-    }
-
-    public boolean isIntern() {
-        return "INTERN".equalsIgnoreCase(getRoleName());
-    }
-
-    public boolean isAdmin() {
-        return "ADMIN".equalsIgnoreCase(getRoleName());
     }
 
     @Override

@@ -25,7 +25,7 @@ public class Contract implements Serializable {
     }
 
     public Contract(int contractId, int applicationId, String fileName, String filePath, 
-                    long fileSize, String mimeType, long uploadedBy, Timestamp uploadedAt,
+                    long fileSize, String mimeType, long uploadedBy, Timestamp uploadedAt, 
                     String status, Timestamp confirmedAt) {
         this.contractId = contractId;
         this.applicationId = applicationId;

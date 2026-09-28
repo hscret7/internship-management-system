@@ -41,7 +41,13 @@ public class DocumentUploadServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -101,7 +107,7 @@ public class DocumentUploadServlet extends HttpServlet {
     private void handleUploadContract(HttpServletRequest request, HttpServletResponse response, 
                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
-        if (!currentUser.isHR() && !currentUser.isAdmin()) {
+        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ HR/Admin mới có quyền tải lên hợp đồng.");
             return;
         }

@@ -38,7 +38,13 @@ public class DocumentDownloadServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");

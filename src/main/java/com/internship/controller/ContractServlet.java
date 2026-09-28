@@ -34,7 +34,13 @@ public class ContractServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -43,12 +49,12 @@ public class ContractServlet extends HttpServlet {
 
         try {
             Contract contract = null;
-            if (currentUser.isIntern()) {
+            if (DocumentService.isIntern(currentUser)) {
                 InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
                 if (profile != null) {
                     contract = documentService.getContractByProfileId(profile.getProfileId());
                 }
-            } else if (currentUser.isHR() || currentUser.isAdmin()) {
+            } else if (DocumentService.isHR(currentUser) || DocumentService.isAdmin(currentUser)) {
                 String idStr = request.getParameter("id");
                 if (idStr != null && !idStr.isEmpty()) {
                     contract = documentService.getContractById(Integer.parseInt(idStr));
@@ -67,7 +73,13 @@ public class ContractServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
+        User currentUser = null;
+        if (session != null) {
+            currentUser = (User) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                currentUser = (User) session.getAttribute("user");
+            }
+        }
 
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");

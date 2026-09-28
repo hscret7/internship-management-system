@@ -2,10 +2,13 @@
 -- DATABASE SCHEMA: BE2 - HỒ SƠ, TÀI LIỆU VÀ HỢP ĐỒNG
 -- Dự án: Internship Management System
 -- Database: MySQL 8.0+
--- Chạy database/schema.sql của BE1 trước file này.
 -- ========================================================
 
+CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE internship_management;
+
+-- 1. Bảng roles (Đã được tạo bởi BE1)
+-- 2. Bảng users (Đã được tạo bởi BE1, user_id là BIGINT)
 
 -- 3. Bảng intern_profiles (BE2 Quản lý: Hồ sơ thực tập sinh)
 CREATE TABLE IF NOT EXISTS intern_profiles (
@@ -32,7 +35,7 @@ CREATE TABLE IF NOT EXISTS intern_profiles (
 -- 4. Bảng applications (Tham chiếu cho Hợp đồng và Đơn ứng tuyển)
 CREATE TABLE IF NOT EXISTS applications (
     application_id INT AUTO_INCREMENT PRIMARY KEY,
-    intern_id INT NOT NULL, -- Tham chiếu tới intern_profiles(profile_id)
+    intern_id INT NOT NULL, -- Tham chiếu tới intern_profiles(profile_id) hoặc users(user_id)
     status VARCHAR(30) DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     reviewed_by BIGINT NULL,
