@@ -520,6 +520,46 @@
         });
     }
 
+    async function hrDashboard() {
+        var data = await api('/dashboard');
+        byId('metricTotalInterns').textContent = data.totalInterns ?? 0;
+        byId('metricActiveEnrollments').textContent = data.activeEnrollments ?? 0;
+        byId('metricCompletedEnrollments').textContent = data.completedEnrollments ?? 0;
+        byId('metricCompletionRatePercent').textContent =
+            (data.completionRatePercent ?? 0) + '%';
+
+        function renderRanks(targetId, values, emptyMessage) {
+            var target = byId(targetId);
+            target.replaceChildren();
+            var entries = Array.isArray(values) ? values : [];
+            if (!entries.length) {
+                target.appendChild(node('p', emptyMessage, 'fe3-muted mb-0'));
+                return;
+            }
+            var maximum = Math.max(1, ...entries.map(function (entry) {
+                return Number(entry.count) || 0;
+            }));
+            entries.forEach(function (entry) {
+                var item = node('div', null, 'fe3-rank-item');
+                var heading = node('div', null, 'fe3-rank-heading');
+                heading.appendChild(node('span', entry.label || 'Chưa xác định'));
+                heading.appendChild(node('strong', Number(entry.count) || 0));
+                item.appendChild(heading);
+                var track = node('div', null, 'fe3-rank-track');
+                var fill = node('span');
+                fill.style.width = Math.max(0, Math.min(100,
+                    (Number(entry.count) || 0) / maximum * 100)) + '%';
+                track.appendChild(fill);
+                item.appendChild(track);
+                target.appendChild(item);
+            });
+        }
+
+        renderRanks('universityStats', data.internsByUniversity, 'Chưa có dữ liệu trường.');
+        renderRanks('majorStats', data.internsByMajor, 'Chưa có dữ liệu ngành.');
+        renderRanks('mentorStats', data.activeInternsByMentor, 'Chưa có TTS được phân mentor.');
+    }
+
     async function hrEvaluations() {
         var entries = await api('/evaluations');
         var search = byId('evaluationSearch');
@@ -577,7 +617,8 @@
         'intern-task-detail': internTaskDetail,
         'intern-reports': internReports,
         'intern-evaluation': function () { return evaluationPage(false); },
-        'hr-evaluations': hrEvaluations
+        'hr-evaluations': hrEvaluations,
+        'hr-dashboard': hrDashboard
     })[page];
     if (start) start().catch(errorMessage);
 })();

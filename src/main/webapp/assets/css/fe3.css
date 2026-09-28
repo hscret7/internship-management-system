@@ -195,6 +195,32 @@
 }
 .fe3-list-button { transition: background .18s ease, border-color .18s ease, transform .18s ease; }
 .fe3-list-button:hover { transform: translateY(-1px); }
+.fe3-dashboard-panels .fe3-panel { min-height: 280px; }
+.fe3-rank-list { display: grid; gap: 16px; }
+.fe3-rank-item { min-width: 0; }
+.fe3-rank-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 7px;
+    color: var(--text);
+    font-size: .88rem;
+}
+.fe3-rank-heading span { min-width: 0; overflow-wrap: anywhere; }
+.fe3-rank-heading strong { color: var(--brand); font-variant-numeric: tabular-nums; }
+.fe3-rank-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--border);
+}
+.fe3-rank-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--brand);
+}
 .fe3-feedback { border: 1px solid var(--border); }
 .fe3-page .form-label { font-weight: 650; font-size: .87rem; }
 .fe3-page textarea.form-control { resize: vertical; }
