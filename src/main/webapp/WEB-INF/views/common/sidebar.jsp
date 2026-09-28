@@ -108,22 +108,22 @@
                 <i class="bi bi-people"></i><span>Hồ sơ thực tập sinh</span>
             </a>
 
-            <span class="app-nav__link is-soon" aria-disabled="true">
+            <a class="app-nav__link ${activePage eq 'hr-applications' ? 'is-active' : ''}"
+               href="${ctx}/hr/applications">
                 <i class="bi bi-inbox"></i><span>Duyệt hồ sơ</span>
-                <span class="app-nav__soon">Sắp có</span>
-            </span>
+            </a>
 
             <div class="app-nav__group">Chương trình</div>
 
-            <span class="app-nav__link is-soon" aria-disabled="true">
+            <a class="app-nav__link ${activePage eq 'hr-catalog' ? 'is-active' : ''}"
+               href="${ctx}/hr/catalog">
                 <i class="bi bi-diagram-3"></i><span>Chương trình thực tập</span>
-                <span class="app-nav__soon">Sắp có</span>
-            </span>
+            </a>
 
-            <span class="app-nav__link is-soon" aria-disabled="true">
-                <i class="bi bi-person-badge"></i><span>Mentor</span>
-                <span class="app-nav__soon">Sắp có</span>
-            </span>
+            <a class="app-nav__link ${activePage eq 'hr-enrollments' ? 'is-active' : ''}"
+               href="${ctx}/hr/enrollments">
+                <i class="bi bi-person-badge"></i><span>Ghi danh &amp; phân mentor</span>
+            </a>
 
             <div class="app-nav__group">Thời gian và quyền lợi</div>
 
@@ -144,10 +144,10 @@
                 <i class="bi bi-award"></i><span>Kết quả đánh giá</span>
             </a>
 
-            <span class="app-nav__link is-soon" aria-disabled="true">
+            <a class="app-nav__link ${activePage eq 'hr-dashboard' ? 'is-active' : ''}"
+               href="${ctx}/hr/dashboard">
                 <i class="bi bi-bar-chart"></i><span>Thống kê</span>
-                <span class="app-nav__soon">Sắp có</span>
-            </span>
+            </a>
 
         </c:if>
 
