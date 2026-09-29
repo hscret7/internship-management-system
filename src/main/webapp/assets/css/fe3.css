@@ -195,6 +195,32 @@
 }
 .fe3-list-button { transition: background .18s ease, border-color .18s ease, transform .18s ease; }
 .fe3-list-button:hover { transform: translateY(-1px); }
+.fe3-dashboard-panels .fe3-panel { min-height: 280px; }
+.fe3-rank-list { display: grid; gap: 16px; }
+.fe3-rank-item { min-width: 0; }
+.fe3-rank-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 7px;
+    color: var(--text);
+    font-size: .88rem;
+}
+.fe3-rank-heading span { min-width: 0; overflow-wrap: anywhere; }
+.fe3-rank-heading strong { color: var(--brand); font-variant-numeric: tabular-nums; }
+.fe3-rank-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--border);
+}
+.fe3-rank-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--brand);
+}
 .fe3-feedback { border: 1px solid var(--border); }
 .fe3-page .form-label { font-weight: 650; font-size: .87rem; }
 .fe3-page textarea.form-control { resize: vertical; }
@@ -209,4 +235,37 @@
     .fe3-metric { min-height: 90px; }
     .fe3-panel { padding: 18px; }
     .fe3-search { width: 100%; }
+}
+
+/* HR workflows supplied by BE3: keep their form fields and actions intact. */
+.fe3-be3__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.fe3-be3 .fe3-panel > h2,
+.fe3-be3 .fe3-panel > h3 { margin: 0 0 18px; color: var(--text); font-size: 1.2rem; font-weight: 700; }
+.fe3-be3 .fe3-panel > h3 { margin-top: 24px; font-size: 1rem; }
+.fe3-be3 .fe3-panel > p { color: var(--text-muted); }
+.fe3-be3 .fe3-panel > p a { color: var(--brand); font-weight: 650; }
+.fe3-be3 .fe3-panel > form { display: flex !important; align-items: end; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; }
+.fe3-be3 .fe3-panel form label { display: grid; gap: 6px; min-width: min(220px, 100%); color: var(--text); font-size: .87rem; font-weight: 650; }
+.fe3-be3 .fe3-panel form input:not([type="hidden"]),
+.fe3-be3 .fe3-panel form select {
+    width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+}
+.fe3-be3 .fe3-panel form input:focus-visible,
+.fe3-be3 .fe3-panel form select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.fe3-be3 .fe3-panel form button {
+    min-height: 40px; padding: 8px 15px; border: 1px solid var(--brand);
+    border-radius: var(--radius-sm); background: var(--brand); color: var(--brand-contrast); font-weight: 650;
+}
+.fe3-be3 .fe3-panel form button:hover { background: var(--brand-strong); border-color: var(--brand-strong); }
+.fe3-be3__table-scroll { max-width: 100%; overflow-x: auto; }
+.fe3-be3 table { width: 100%; border-collapse: collapse; color: var(--text); }
+.fe3-be3 th, .fe3-be3 td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.fe3-be3 th { background: var(--surface-sunken); color: var(--text-muted); font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.fe3-be3 tr:last-child td { border-bottom: 0; }
+.fe3-be3 td form { margin: 0; }
+.fe3-be3 td a { color: var(--brand); font-weight: 650; }
+@media (max-width: 640px) {
+    .fe3-be3 .fe3-panel > form { display: grid !important; }
+    .fe3-be3 .fe3-panel form label { min-width: 0; }
 }

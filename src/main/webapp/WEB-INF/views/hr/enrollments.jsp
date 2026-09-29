@@ -1,20 +1,24 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Quản lý ghi danh</title>
-</head>
-<body>
-<h1>Quản lý ghi danh & phân mentor</h1>
-<p><a href="${pageContext.request.contextPath}/hr/catalog">Thiết lập phòng ban, chương trình, mentor</a></p>
+<c:set var="pageTitle" value="Ghi danh & phân mentor" />
+<c:set var="activePage" value="hr-enrollments" />
+<c:set var="pageStylesheet" value="fe3.css" />
+<%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+<section class="fe3-page fe3-be3">
+    <div class="fe3-hero">
+        <div>
+            <span class="fe3-hero__eyebrow"><i class="bi bi-person-gear"></i> PHÂN CÔNG</span>
+            <h2>Ghi danh & phân mentor</h2>
+            <p>Đưa hồ sơ đã duyệt vào chương trình và theo dõi mentor phụ trách.</p>
+        </div>
+        <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-people"></i></div>
+    </div>
+    <div class="fe3-be3__actions"><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/hr/catalog">Thiết lập chương trình <i class="bi bi-arrow-right"></i></a></div>
+    <div class="fe3-panel">
 
 <c:if test="${not empty successMessage}">
-    <div style="color:green"><c:out value="${successMessage}"/></div>
-</c:if>
-<c:if test="${not empty errorMessage}">
-    <div style="color:red"><c:out value="${errorMessage}"/></div>
+    <div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div>
 </c:if>
 
 <%-- Detail view --%>
@@ -37,7 +41,7 @@
     </c:if>
 
     <h3>Lịch sử mentor</h3>
-    <table border="1">
+    <div class="fe3-be3__table-scroll"><table>
         <tr><th>Mentor</th><th>Ngày gán</th><th>Ngày kết thúc</th><th>Lý do</th><th>Gán bởi</th></tr>
         <c:forEach var="ma" items="${mentorHistory}">
             <tr>
@@ -48,7 +52,7 @@
                 <td><c:out value="${ma.assignedByName}"/></td>
             </tr>
         </c:forEach>
-    </table>
+    </table></div>
     <p><a href="${pageContext.request.contextPath}/hr/enrollments">← Quay lại</a></p>
 </c:if>
 
@@ -118,7 +122,7 @@
     <p>
         <a href="${pageContext.request.contextPath}/hr/enrollments?action=enroll-form">Ghi danh mới</a>
     </p>
-    <table border="1">
+    <div class="fe3-be3__table-scroll"><table>
         <tr>
             <th>ID</th><th>Thực tập sinh</th><th>Chương trình</th>
             <th>Trạng thái</th><th>Mentor</th><th>Ngày ghi danh</th><th>Thao tác</th>
@@ -136,7 +140,9 @@
                 </td>
             </tr>
         </c:forEach>
-    </table>
+    </table></div>
 </c:if>
-</body>
-</html>
+    </div>
+</section>
+
+<%@ include file="/WEB-INF/views/common/footer.jsp" %>

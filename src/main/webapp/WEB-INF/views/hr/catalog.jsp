@@ -1,13 +1,23 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><title>Thiết lập thực tập</title></head>
-<body>
-<h1>Phòng ban, chương trình và mentor</h1>
-<p><a href="${pageContext.request.contextPath}/hr/enrollments">Quản lý ghi danh</a></p>
-<c:if test="${not empty successMessage}"><p><c:out value="${successMessage}"/></p></c:if>
-<c:if test="${not empty errorMessage}"><p><c:out value="${errorMessage}"/></p></c:if>
+<c:set var="pageTitle" value="Chương trình thực tập" />
+<c:set var="activePage" value="hr-catalog" />
+<c:set var="pageStylesheet" value="fe3.css" />
+<%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+<section class="fe3-page fe3-be3">
+    <div class="fe3-hero">
+        <div>
+            <span class="fe3-hero__eyebrow"><i class="bi bi-diagram-3"></i> CHƯƠNG TRÌNH</span>
+            <h2>Thiết lập thực tập</h2>
+            <p>Quản lý phòng ban, chương trình và mentor tại một nơi.</p>
+        </div>
+        <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-diagram-3"></i></div>
+    </div>
+    <div class="fe3-be3__actions"><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/hr/enrollments">Quản lý ghi danh <i class="bi bi-arrow-right"></i></a></div>
+    <c:if test="${not empty successMessage}"><div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div></c:if>
+
+<div class="fe3-panel">
 
 <h2>Tạo phòng ban</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
@@ -18,6 +28,8 @@
     <button type="submit">Tạo phòng ban</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Tạo chương trình</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
     <input type="hidden" name="csrfToken" value="${csrfToken}"/>
@@ -35,8 +47,10 @@
     <button type="submit">Tạo chương trình PLANNED</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Chương trình</h2>
-<table border="1">
+<div class="fe3-be3__table-scroll"><table>
     <tr><th>Tên</th><th>Phòng ban</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr>
     <c:forEach var="program" items="${programs}">
         <tr>
@@ -54,8 +68,10 @@
             </c:if></td>
         </tr>
     </c:forEach>
-</table>
+</table></div>
 
+</div>
+<div class="fe3-panel">
 <h2>Thêm mentor</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
     <input type="hidden" name="csrfToken" value="${csrfToken}"/>
@@ -75,8 +91,10 @@
     <button type="submit">Thêm mentor</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Mentor</h2>
-<table border="1">
+<div class="fe3-be3__table-scroll"><table>
     <tr><th>Tên</th><th>Phòng ban</th><th>Chuyên môn</th><th>Đang hướng dẫn</th></tr>
     <c:forEach var="mentor" items="${mentors}">
         <tr>
@@ -86,6 +104,8 @@
             <td>${mentor.currentMenteeCount}/${mentor.maxMentees}</td>
         </tr>
     </c:forEach>
-</table>
-</body>
-</html>
+</table></div>
+</div>
+</section>
+
+<%@ include file="/WEB-INF/views/common/footer.jsp" %>
