@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="pageTitle" value="Danh sách chương trình thực tập" />
 <!-- Cấu hình biến activePage để menu sidebar highlight đúng mục Programs -->
