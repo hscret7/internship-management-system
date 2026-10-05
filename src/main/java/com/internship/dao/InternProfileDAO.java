@@ -121,6 +121,13 @@ public class InternProfileDAO {
      * Tìm kiếm theo tên, trường, ngành (Yêu cầu BE2 - Ảnh 1).
      */
     public List<InternProfile> searchProfiles(String name, String university, String major) throws SQLException {
+        return searchProfiles(name, university, major, null);
+    }
+
+    /**
+     * Tìm kiếm và lọc theo tên, trường, ngành và trạng thái hồ sơ (Hỗ trợ mở rộng cho FE2 / QA TC2).
+     */
+    public List<InternProfile> searchProfiles(String name, String university, String major, String status) throws SQLException {
         List<InternProfile> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder("SELECT * FROM intern_profiles WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
@@ -136,6 +143,10 @@ public class InternProfileDAO {
         if (major != null && !major.trim().isEmpty()) {
             sql.append("AND LOWER(major) LIKE ? ");
             params.add("%" + major.trim().toLowerCase() + "%");
+        }
+        if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status.trim())) {
+            sql.append("AND UPPER(status) = ? ");
+            params.add(status.trim().toUpperCase());
         }
         sql.append("ORDER BY profile_id DESC");
 

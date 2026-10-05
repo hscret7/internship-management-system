@@ -234,6 +234,13 @@ public class InternProfileService {
         return profileDAO.searchProfiles(name, university, major);
     }
 
+    /**
+     * Tìm kiếm và lọc hồ sơ theo tên, trường, ngành và trạng thái (Hỗ trợ mở rộng cho FE2 / QA TC2).
+     */
+    public List<InternProfile> searchProfiles(String name, String university, String major, String status) throws SQLException {
+        return profileDAO.searchProfiles(name, university, major, status);
+    }
+
     public boolean updateStatus(int profileId, String status) throws SQLException {
         return profileDAO.updateStatus(profileId, status);
     }

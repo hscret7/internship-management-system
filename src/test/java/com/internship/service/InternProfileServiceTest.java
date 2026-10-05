@@ -66,6 +66,11 @@ class InternProfileServiceTest {
 
         @Override
         public List<InternProfile> searchProfiles(String name, String university, String major) throws SQLException {
+            return searchProfiles(name, university, major, null);
+        }
+
+        @Override
+        public List<InternProfile> searchProfiles(String name, String university, String major, String status) throws SQLException {
             return database.stream().filter(p -> {
                 boolean matchName = (name == null || name.trim().isEmpty())
                         || (p.getFullName() != null && p.getFullName().toLowerCase().contains(name.trim().toLowerCase()));
@@ -73,7 +78,9 @@ class InternProfileServiceTest {
                         || (p.getUniversity() != null && p.getUniversity().toLowerCase().contains(university.trim().toLowerCase()));
                 boolean matchMajor = (major == null || major.trim().isEmpty())
                         || (p.getMajor() != null && p.getMajor().toLowerCase().contains(major.trim().toLowerCase()));
-                return matchName && matchUni && matchMajor;
+                boolean matchStatus = (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status.trim()))
+                        || (p.getStatus() != null && p.getStatus().equalsIgnoreCase(status.trim()));
+                return matchName && matchUni && matchMajor && matchStatus;
             }).toList();
         }
 
@@ -310,6 +317,24 @@ class InternProfileServiceTest {
         void testSearchEmptyCriteria() throws Exception {
             List<InternProfile> result = service.searchProfiles("", "  ", null);
             assertEquals(3, result.size());
+        }
+
+        @Test
+        @DisplayName("Lọc theo trạng thái ACTIVE / INACTIVE thành công (Hỗ trợ FE2 / QA TC2)")
+        void testSearchByStatus() throws Exception {
+            stubDAO.database.get(0).setStatus("ACTIVE");
+            stubDAO.database.get(1).setStatus("INACTIVE");
+            stubDAO.database.get(2).setStatus("ACTIVE");
+
+            List<InternProfile> activeList = service.searchProfiles(null, null, null, "ACTIVE");
+            assertEquals(2, activeList.size());
+
+            List<InternProfile> inactiveList = service.searchProfiles(null, null, null, "INACTIVE");
+            assertEquals(1, inactiveList.size());
+            assertEquals("Trần Thị Hoa", inactiveList.get(0).getFullName());
+
+            List<InternProfile> allList = service.searchProfiles(null, null, null, "ALL");
+            assertEquals(3, allList.size());
         }
     }
 

@@ -173,14 +173,16 @@ public class InternProfileServlet extends HttpServlet {
         }
         String university = request.getParameter("university");
         String major = request.getParameter("major");
+        String status = request.getParameter("status");
 
-        List<InternProfile> list = profileService.searchProfiles(name, university, major);
+        List<InternProfile> list = profileService.searchProfiles(name, university, major, status);
 
         request.setAttribute("profiles", list);
         request.setAttribute("searchName", name);
         request.setAttribute("keyword", name);
         request.setAttribute("searchUniversity", university);
         request.setAttribute("searchMajor", major);
+        request.setAttribute("searchStatus", status);
 
         request.getRequestDispatcher("/hr/intern-list.jsp").forward(request, response);
     }
