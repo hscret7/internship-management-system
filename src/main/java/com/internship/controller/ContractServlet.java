@@ -5,6 +5,7 @@ import com.internship.model.InternProfile;
 import com.internship.model.User;
 import com.internship.service.DocumentService;
 import com.internship.service.InternProfileService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -47,6 +48,13 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        if (!DocumentService.isIntern(currentUser) && !DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem hợp đồng.");
+            return;
+        }
+
+        CsrfToken.expose(request);
+
         try {
             Contract contract = null;
             if (DocumentService.isIntern(currentUser)) {
@@ -88,6 +96,16 @@ public class ContractServlet extends HttpServlet {
 
         String path = request.getServletPath();
         if ("/contract/confirm".equals(path)) {
+            if (!DocumentService.isIntern(currentUser)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ thực tập sinh mới có quyền xác nhận hợp đồng.");
+                return;
+            }
+
+            if (!CsrfToken.valid(request)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
+                return;
+            }
+
             String contractIdStr = request.getParameter("contractId");
             if (contractIdStr == null || contractIdStr.trim().isEmpty()) {
                 session.setAttribute("flashError", "Thiếu mã hợp đồng xác nhận.");
@@ -99,7 +117,7 @@ public class ContractServlet extends HttpServlet {
                 int contractId = Integer.parseInt(contractIdStr);
                 documentService.confirmContract(contractId, currentUser);
                 session.setAttribute("flashSuccess", "Bạn đã xác nhận hợp đồng thực tập thành công trên hệ thống!");
-            } catch (IllegalAccessException | IllegalArgumentException e) {
+            } catch (IllegalAccessException | IllegalArgumentException | IllegalStateException e) {
                 session.setAttribute("flashError", e.getMessage());
             } catch (SQLException e) {
                 log("Lỗi CSDL khi xác nhận hợp đồng", e);

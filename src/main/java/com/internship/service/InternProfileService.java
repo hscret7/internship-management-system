@@ -97,7 +97,57 @@ public class InternProfileService {
     }
 
     /**
-     * Cập nhật hồ sơ thực tập sinh.
+     * TTS tự tạo mới hồ sơ cá nhân có kiểm tra role.
+     */
+    public int createProfile(InternProfile profile, User currentUser) 
+            throws IllegalArgumentException, IllegalAccessException, SQLException {
+        if (currentUser == null || !DocumentService.isIntern(currentUser)) {
+            throw new IllegalAccessException("Chỉ thực tập sinh mới có quyền tạo hồ sơ cá nhân.");
+        }
+        profile.setUserId(currentUser.getUserId());
+        profile.setStatus("ACTIVE");
+        return createProfile(profile);
+    }
+
+    /**
+     * Cập nhật hồ sơ thực tập sinh (bảo vệ quyền sở hữu).
+     */
+    public boolean updateProfile(InternProfile profile, User currentUser) 
+            throws IllegalArgumentException, IllegalAccessException, SQLException {
+        if (currentUser == null) {
+            throw new IllegalAccessException("Vui lòng đăng nhập để thực hiện thao tác.");
+        }
+        if (!DocumentService.isIntern(currentUser)) {
+            throw new IllegalAccessException("Chỉ thực tập sinh mới có quyền cập nhật hồ sơ cá nhân.");
+        }
+        if (profile == null || profile.getProfileId() <= 0) {
+            throw new IllegalArgumentException("Mã hồ sơ không hợp lệ.");
+        }
+
+        InternProfile existing = profileDAO.getProfileById(profile.getProfileId());
+        if (existing == null) {
+            throw new IllegalArgumentException("Không tìm thấy hồ sơ có ID: " + profile.getProfileId());
+        }
+
+        // Kiểm tra quyền sở hữu (chống IDOR)
+        if (existing.getUserId() != currentUser.getUserId()) {
+            throw new IllegalAccessException("Bạn không có quyền chỉnh sửa hồ sơ của người khác.");
+        }
+
+        // Bảo vệ các trường bất biến: userId và status giữ nguyên từ existing
+        profile.setUserId(existing.getUserId());
+        profile.setStatus(existing.getStatus());
+
+        List<String> errors = validateProfile(profile);
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("; ", errors));
+        }
+
+        return profileDAO.updateProfile(profile);
+    }
+
+    /**
+     * Cập nhật hồ sơ thực tập sinh (overload giữ tương thích).
      */
     public boolean updateProfile(InternProfile profile) throws IllegalArgumentException, SQLException {
         List<String> errors = validateProfile(profile);
@@ -108,6 +158,14 @@ public class InternProfileService {
         InternProfile existing = profileDAO.getProfileById(profile.getProfileId());
         if (existing == null) {
             throw new IllegalArgumentException("Không tìm thấy hồ sơ có ID: " + profile.getProfileId());
+        }
+
+        if (profile.getUserId() > 0 && existing.getUserId() != profile.getUserId()) {
+            throw new IllegalArgumentException("Không có quyền chỉnh sửa hồ sơ của người dùng khác.");
+        }
+        profile.setUserId(existing.getUserId());
+        if (profile.getStatus() == null) {
+            profile.setStatus(existing.getStatus());
         }
 
         return profileDAO.updateProfile(profile);

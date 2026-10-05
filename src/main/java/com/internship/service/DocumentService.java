@@ -192,6 +192,10 @@ public class DocumentService {
             return true; // Đã xác nhận trước đó
         }
 
+        if (!"PENDING_CONFIRMATION".equalsIgnoreCase(contract.getStatus())) {
+            throw new IllegalStateException("Hợp đồng không ở trạng thái chờ xác nhận. Trạng thái hiện tại: " + contract.getStatus());
+        }
+
         return contractDAO.confirmContract(contractId);
     }
 
@@ -206,6 +210,10 @@ public class DocumentService {
         Document doc = documentDAO.getDocumentById(documentId);
         if (doc == null) {
             throw new IllegalArgumentException("Không tìm thấy tài liệu ID: " + documentId);
+        }
+
+        if (!"PENDING".equalsIgnoreCase(doc.getStatus())) {
+            throw new IllegalStateException("Chỉ tài liệu có trạng thái PENDING mới có thể phê duyệt. Trạng thái hiện tại: " + doc.getStatus());
         }
 
         return documentDAO.approveDocument(documentId, reviewer.getUserId());
@@ -226,6 +234,10 @@ public class DocumentService {
         Document doc = documentDAO.getDocumentById(documentId);
         if (doc == null) {
             throw new IllegalArgumentException("Không tìm thấy tài liệu ID: " + documentId);
+        }
+
+        if (!"PENDING".equalsIgnoreCase(doc.getStatus())) {
+            throw new IllegalStateException("Chỉ tài liệu có trạng thái PENDING mới có thể từ chối. Trạng thái hiện tại: " + doc.getStatus());
         }
 
         return documentDAO.rejectDocument(documentId, reviewer.getUserId(), rejectReason.trim());
@@ -269,6 +281,12 @@ public class DocumentService {
         if (isIntern(currentUser)) {
             InternProfile userProfile = profileDAO.getProfileByUserId(currentUser.getUserId());
             if (userProfile == null) return false;
+
+            Application app = applicationDAO.getApplicationById(contract.getApplicationId());
+            if (app != null && app.getInternId() == userProfile.getProfileId()) {
+                return true;
+            }
+
             Contract userContract = contractDAO.getContractByProfileId(userProfile.getProfileId());
             return userContract != null && userContract.getContractId() == contract.getContractId();
         }

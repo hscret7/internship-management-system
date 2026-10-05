@@ -27,7 +27,7 @@ public class ContractDAO {
                     }
                     String updateSql = "UPDATE contracts SET file_name = ?, file_path = ?, file_size = ?, "
                                      + "mime_type = ?, uploaded_by = ?, uploaded_at = CURRENT_TIMESTAMP, "
-                                     + "status = 'PENDING_CONFIRMATION', confirmed_at = NULL WHERE contract_id = ?";
+                                     + "status = 'PENDING_CONFIRMATION', confirmed_at = NULL WHERE contract_id = ? AND status != 'CONFIRMED'";
                     try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
                         updatePs.setString(1, contract.getFileName());
                         updatePs.setString(2, contract.getFilePath());
@@ -121,7 +121,7 @@ public class ContractDAO {
      * TTS bấm Xác nhận hợp đồng (US10): Lưu confirmed_at và chuyển trạng thái sang CONFIRMED.
      */
     public boolean confirmContract(int contractId) throws SQLException {
-        String sql = "UPDATE contracts SET status = 'CONFIRMED', confirmed_at = CURRENT_TIMESTAMP WHERE contract_id = ?";
+        String sql = "UPDATE contracts SET status = 'CONFIRMED', confirmed_at = CURRENT_TIMESTAMP WHERE contract_id = ? AND status = 'PENDING_CONFIRMATION'";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, contractId);

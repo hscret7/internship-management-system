@@ -100,7 +100,7 @@ public class DocumentDAO {
      * HR duyệt tài liệu (US05 - BE2): PENDING -> APPROVED
      */
     public boolean approveDocument(int documentId, long reviewedBy) throws SQLException {
-        String sql = "UPDATE documents SET status = 'APPROVED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = NULL WHERE document_id = ?";
+        String sql = "UPDATE documents SET status = 'APPROVED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = NULL WHERE document_id = ? AND status = 'PENDING'";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, reviewedBy);
@@ -113,7 +113,7 @@ public class DocumentDAO {
      * HR từ chối tài liệu (US05 - BE2): PENDING -> REJECTED (bắt buộc lý do)
      */
     public boolean rejectDocument(int documentId, long reviewedBy, String rejectReason) throws SQLException {
-        String sql = "UPDATE documents SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = ? WHERE document_id = ?";
+        String sql = "UPDATE documents SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = ? WHERE document_id = ? AND status = 'PENDING'";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, reviewedBy);

@@ -43,6 +43,7 @@
                     <!-- Nút chuyển trạng thái hồ sơ (BE2 Logic) -->
                     <div class="border-top pt-3">
                         <form action="${pageContext.request.contextPath}/intern/profile" method="post">
+                            <input type="hidden" name="csrfToken" value="${csrfToken}">
                             <input type="hidden" name="action" value="update_status">
                             <input type="hidden" name="profileId" value="${profile.profileId}">
                             <input type="hidden" name="status" value="${profile.status == 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}">
@@ -169,6 +170,7 @@
                                             <c:if test="${doc.status eq 'PENDING'}">
                                                 <!-- Duyệt tài liệu (US05) -->
                                                 <form action="${pageContext.request.contextPath}/document/review" method="post" class="d-inline m-0">
+                                                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                                                     <input type="hidden" name="documentId" value="${doc.documentId}">
                                                     <input type="hidden" name="action" value="approve">
                                                     <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
@@ -252,6 +254,7 @@
                                         Hợp đồng đang chờ TTS xác nhận. HR có thể thay thế bằng file mới trước khi TTS bấm xác nhận.
                                     </div>
                                     <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
+                                        <input type="hidden" name="csrfToken" value="${csrfToken}">
                                         <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
                                         <input type="hidden" name="applicationId" value="${contract.applicationId}">
                                         <div class="mb-3">
@@ -270,6 +273,7 @@
                                 Hợp đồng là tài liệu riêng. Sau khi ứng viên được duyệt đơn (APPROVED), HR tải lên bản hợp đồng để thực tập sinh xem và xác nhận.
                             </p>
                             <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}">
                                 <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold small">Mã đơn ứng tuyển (Application ID) <span class="text-danger">*</span></label>
@@ -296,6 +300,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="${pageContext.request.contextPath}/hr/interns/edit" method="post">
+                <input type="hidden" name="csrfToken" value="${csrfToken}">
                 <input type="hidden" name="action" value="hr_edit">
                 <input type="hidden" name="profileId" value="${profile.profileId}">
                 <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
@@ -373,6 +378,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="${pageContext.request.contextPath}/document/review" method="post">
+                <input type="hidden" name="csrfToken" value="${csrfToken}">
                 <input type="hidden" name="action" value="reject">
                 <input type="hidden" name="documentId" id="rejectModalDocId" value="">
                 <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">

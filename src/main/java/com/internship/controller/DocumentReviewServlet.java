@@ -2,6 +2,7 @@ package com.internship.controller;
 
 import com.internship.model.User;
 import com.internship.service.DocumentService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -54,13 +55,22 @@ public class DocumentReviewServlet extends HttpServlet {
             return;
         }
 
+        boolean isAjax = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+                || (request.getHeader("Accept") != null && request.getHeader("Accept").contains("application/json"));
+
+        if (!CsrfToken.valid(request)) {
+            if (isAjax) {
+                writeJsonResponse(response, HttpServletResponse.SC_FORBIDDEN, false, "Invalid CSRF token", null);
+            } else {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
+            }
+            return;
+        }
+
         String documentIdStr = request.getParameter("documentId");
         String action = request.getParameter("action"); // 'approve' hoặc 'reject'
         String rejectReason = request.getParameter("rejectReason");
         String redirectUrl = request.getParameter("redirectUrl");
-
-        boolean isAjax = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
-                || (request.getHeader("Accept") != null && request.getHeader("Accept").contains("application/json"));
 
         if (documentIdStr == null || documentIdStr.trim().isEmpty()) {
             handleError(request, response, "Thiếu mã tài liệu cần duyệt.", redirectUrl, isAjax);
@@ -97,7 +107,7 @@ public class DocumentReviewServlet extends HttpServlet {
             } else {
                 handleError(request, response, "Hành động duyệt tài liệu không hợp lệ (chỉ chấp nhận 'approve' hoặc 'reject').", redirectUrl, isAjax);
             }
-        } catch (IllegalArgumentException | IllegalAccessException e) {
+        } catch (IllegalArgumentException | IllegalAccessException | IllegalStateException e) {
             handleError(request, response, e.getMessage(), redirectUrl, isAjax);
         } catch (SQLException e) {
             log("Lỗi CSDL khi duyệt tài liệu", e);

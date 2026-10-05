@@ -22,6 +22,7 @@
     <form action="${ctx}/intern/profile" method="post">
         <div class="card-body">
 
+            <input type="hidden" name="csrfToken" value="${csrfToken}">
             <input type="hidden" name="profileId" value="${profile.profileId}">
 
             <div class="mb-3">

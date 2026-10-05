@@ -6,6 +6,7 @@ import com.internship.model.InternProfile;
 import com.internship.model.User;
 import com.internship.service.DocumentService;
 import com.internship.service.InternProfileService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -58,6 +59,8 @@ public class InternProfileServlet extends HttpServlet {
             return;
         }
 
+        CsrfToken.expose(request);
+
         String path = request.getServletPath();
 
         try {
@@ -103,6 +106,11 @@ public class InternProfileServlet extends HttpServlet {
             return;
         }
 
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
+            return;
+        }
+
         String path = request.getServletPath();
         String action = request.getParameter("action");
         if (action == null) {
@@ -132,6 +140,10 @@ public class InternProfileServlet extends HttpServlet {
      */
     private void handleViewOwnProfile(HttpServletRequest request, HttpServletResponse response, User currentUser)
             throws SQLException, ServletException, IOException {
+        if (!DocumentService.isIntern(currentUser)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ thực tập sinh mới có quyền xem hồ sơ cá nhân.");
+            return;
+        }
         InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
         List<Document> documents = null;
 
@@ -286,10 +298,15 @@ public class InternProfileServlet extends HttpServlet {
     }
 
     /**
-     * Lưu (Tạo mới hoặc Cập nhật) hồ sơ thực tập sinh.
+     * Lưu (Tạo mới hoặc Cập nhật) hồ sơ thực tập sinh (chỉ INTERN sở hữu mới có quyền).
      */
     private void handleSaveProfile(HttpServletRequest request, HttpServletResponse response, User currentUser)
             throws SQLException, ServletException, IOException {
+        if (!DocumentService.isIntern(currentUser)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ thực tập sinh mới có quyền tạo hoặc chỉnh sửa hồ sơ cá nhân.");
+            return;
+        }
+
         String profileIdStr = request.getParameter("profileId");
         String fullName = request.getParameter("fullName");
         String dobStr = request.getParameter("dob");
@@ -327,18 +344,28 @@ public class InternProfileServlet extends HttpServlet {
         }
 
         try {
+            InternProfile ownProfile = profileService.getProfileByUserId(currentUser.getUserId());
             if (profileIdStr != null && !profileIdStr.trim().isEmpty()) {
-                // Cập nhật
-                profile.setProfileId(Integer.parseInt(profileIdStr));
-                profileService.updateProfile(profile);
+                int profileId = Integer.parseInt(profileIdStr.trim());
+                if (ownProfile == null || ownProfile.getProfileId() != profileId) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa hồ sơ của người khác.");
+                    return;
+                }
+                profile.setProfileId(profileId);
+                profileService.updateProfile(profile, currentUser);
                 request.getSession().setAttribute("flashSuccess", "Cập nhật hồ sơ thành công!");
             } else {
-                // Tạo mới
-                profileService.createProfile(profile);
-                request.getSession().setAttribute("flashSuccess", "Tạo hồ sơ thực tập sinh thành công!");
+                if (ownProfile != null) {
+                    profile.setProfileId(ownProfile.getProfileId());
+                    profileService.updateProfile(profile, currentUser);
+                    request.getSession().setAttribute("flashSuccess", "Cập nhật hồ sơ thành công!");
+                } else {
+                    profileService.createProfile(profile, currentUser);
+                    request.getSession().setAttribute("flashSuccess", "Tạo hồ sơ thực tập sinh thành công!");
+                }
             }
             response.sendRedirect(request.getContextPath() + "/intern/profile");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalAccessException e) {
             request.setAttribute("errorMessage", e.getMessage());
             request.setAttribute("profile", profile);
             request.getRequestDispatcher("/intern/profile.jsp").forward(request, response);

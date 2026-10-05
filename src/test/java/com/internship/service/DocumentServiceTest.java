@@ -457,6 +457,26 @@ class DocumentServiceTest {
             assertThrows(IllegalAccessException.class, 
                     () -> documentService.rejectDocument(1, internUser, "Lý do hợp lệ"));
         }
+
+        @Test
+        @DisplayName("approveDocument throws IllegalStateException if document is not PENDING")
+        void testApproveDocumentNonPending() {
+            pendingDoc.setStatus("APPROVED");
+            assertThrows(IllegalStateException.class, () -> documentService.approveDocument(1, hrUser));
+
+            pendingDoc.setStatus("REJECTED");
+            assertThrows(IllegalStateException.class, () -> documentService.approveDocument(1, hrUser));
+        }
+
+        @Test
+        @DisplayName("rejectDocument throws IllegalStateException if document is not PENDING")
+        void testRejectDocumentNonPending() {
+            pendingDoc.setStatus("APPROVED");
+            assertThrows(IllegalStateException.class, () -> documentService.rejectDocument(1, hrUser, "Lý do"));
+
+            pendingDoc.setStatus("REJECTED");
+            assertThrows(IllegalStateException.class, () -> documentService.rejectDocument(1, hrUser, "Lý do"));
+        }
     }
 
     // --- US09: Contract Management Tests ---
@@ -588,6 +608,13 @@ class DocumentServiceTest {
         @DisplayName("confirmContract throws IllegalArgumentException if contract not found")
         void testConfirmContractNotFound() {
             assertThrows(IllegalArgumentException.class, () -> documentService.confirmContract(999, internUser));
+        }
+
+        @Test
+        @DisplayName("confirmContract throws IllegalStateException if contract is not PENDING_CONFIRMATION or CONFIRMED")
+        void testConfirmContractInvalidStatus() {
+            pendingContract.setStatus("TERMINATED");
+            assertThrows(IllegalStateException.class, () -> documentService.confirmContract(10, internUser));
         }
     }
 

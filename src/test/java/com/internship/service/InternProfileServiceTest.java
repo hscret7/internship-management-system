@@ -312,4 +312,54 @@ class InternProfileServiceTest {
             assertEquals(3, result.size());
         }
     }
+
+    @Nested
+    @DisplayName("Intern Profile Ownership & IDOR Protection Tests")
+    class InternProfileOwnershipTests {
+
+        @Test
+        @DisplayName("TTS cập nhật hồ sơ của chính mình thành công")
+        void testInternUpdateOwnProfileSuccess() throws Exception {
+            InternProfile ownProfile = createValidProfile(1, 20L, "Nguyễn Văn Nam", "nam@bk.edu.vn");
+            stubDAO.database.add(ownProfile);
+
+            InternProfile updateData = createValidProfile(1, 20L, "Nguyễn Văn Nam Mới", "nam.new@bk.edu.vn");
+            boolean updated = service.updateProfile(updateData, internUser);
+
+            assertTrue(updated);
+            assertEquals("Nguyễn Văn Nam Mới", stubDAO.getProfileById(1).getFullName());
+            assertEquals(20L, stubDAO.getProfileById(1).getUserId());
+        }
+
+        @Test
+        @DisplayName("TTS không thể chỉnh sửa hồ sơ của TTS khác (IDOR)")
+        void testInternCannotUpdateOtherProfileIdor() {
+            InternProfile otherProfile = createValidProfile(1, 99L, "Người Khác", "other@bk.edu.vn");
+            stubDAO.database.add(otherProfile);
+
+            InternProfile tamperData = createValidProfile(1, 20L, "Hack Tên", "hack@bk.edu.vn");
+
+            assertThrows(IllegalAccessException.class, () ->
+                    service.updateProfile(tamperData, internUser));
+        }
+
+        @Test
+        @DisplayName("Người dùng không phải INTERN không được dùng API tự sửa hồ sơ TTS")
+        void testNonInternCannotUpdateViaInternApi() {
+            InternProfile profile = createValidProfile(1, 10L, "HR Profile", "hr@bk.edu.vn");
+            stubDAO.database.add(profile);
+
+            assertThrows(IllegalAccessException.class, () ->
+                    service.updateProfile(profile, hrUser));
+        }
+
+        @Test
+        @DisplayName("Người dùng không phải INTERN không được tạo hồ sơ cá nhân")
+        void testNonInternCannotCreateProfile() {
+            InternProfile profile = createValidProfile(0, 10L, "HR Profile", "hr@bk.edu.vn");
+
+            assertThrows(IllegalAccessException.class, () ->
+                    service.createProfile(profile, hrUser));
+        }
+    }
 }

@@ -4,6 +4,7 @@ import com.internship.model.InternProfile;
 import com.internship.model.User;
 import com.internship.service.DocumentService;
 import com.internship.service.InternProfileService;
+import com.internship.util.CsrfToken;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -54,6 +55,11 @@ public class DocumentUploadServlet extends HttpServlet {
             return;
         }
 
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
+            return;
+        }
+
         String path = request.getServletPath();
         String uploadDir = getServletContext().getRealPath("/uploads");
         if (uploadDir == null) {
@@ -84,6 +90,11 @@ public class DocumentUploadServlet extends HttpServlet {
     private void handleUploadDocument(HttpServletRequest request, HttpServletResponse response, 
                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
+        if (!DocumentService.isIntern(currentUser)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ thực tập sinh mới có quyền tải lên tài liệu cá nhân.");
+            return;
+        }
+
         InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
         if (profile == null) {
             throw new IllegalArgumentException("Vui lòng tạo hồ sơ cá nhân trước khi tải lên tài liệu!");
