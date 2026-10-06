@@ -213,10 +213,22 @@ public class InternProfileServlet extends HttpServlet {
 
         List<Document> documents = documentService.getDocumentsByProfileId(profileId);
         Contract contract = documentService.getContractByProfileId(profileId);
+        com.internship.model.Application application = null;
+        try {
+            com.internship.dao.ApplicationDAO appDAO = new com.internship.dao.ApplicationDAO();
+            List<com.internship.model.Application> apps = appDAO.getApplicationsByInternId(profileId);
+            if (apps != null && !apps.isEmpty()) {
+                application = apps.stream()
+                        .filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus()))
+                        .findFirst()
+                        .orElse(apps.get(0));
+            }
+        } catch (Exception ignored) {}
 
         request.setAttribute("profile", profile);
         request.setAttribute("documents", documents);
         request.setAttribute("contract", contract);
+        request.setAttribute("application", application);
         request.getRequestDispatcher("/hr/intern-detail.jsp").forward(request, response);
     }
 

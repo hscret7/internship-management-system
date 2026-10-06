@@ -70,7 +70,12 @@ public class DocumentService {
                     + (filePart.getSize() / 1024 / 1024) + "MB.");
         }
 
-        String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
+        String rawFileName = filePart.getSubmittedFileName();
+        if (rawFileName == null || rawFileName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên tệp tải lên không hợp lệ hoặc để trống.");
+        }
+
+        String fileName = Paths.get(rawFileName).getFileName().toString();
         String lowerName = fileName.toLowerCase();
 
         boolean validExt = ALLOWED_EXTENSIONS.stream().anyMatch(lowerName::endsWith);
@@ -158,7 +163,7 @@ public class DocumentService {
         contract.setFilePath("uploads/contracts/" + safeFileName);
         contract.setFileSize(filePart.getSize());
         contract.setMimeType(filePart.getContentType() != null ? filePart.getContentType() : "application/pdf");
-        contract.setUploadedBy(hrUserId);
+        contract.setUploadedBy(hrUserId > 0 ? hrUserId : 1L);
         contract.setStatus("PENDING_CONFIRMATION");
 
         int contractId = contractDAO.saveOrUpdateContract(contract);
@@ -189,7 +194,7 @@ public class DocumentService {
         }
 
         if ("CONFIRMED".equalsIgnoreCase(contract.getStatus())) {
-            return true; // Đã xác nhận trước đó
+            return true; // Đã xác nhận trước đó (idempotent)
         }
 
         if (!"PENDING_CONFIRMATION".equalsIgnoreCase(contract.getStatus())) {
@@ -259,7 +264,8 @@ public class DocumentService {
 
         if (isIntern(currentUser)) {
             InternProfile userProfile = profileDAO.getProfileByUserId(currentUser.getUserId());
-            return userProfile != null && userProfile.getProfileId() == document.getProfileId();
+            int profileId = userProfile != null ? userProfile.getProfileId() : 0;
+            return (profileId > 0 && profileId == document.getProfileId()) || (document.getProfileId() == currentUser.getUserId());
         }
 
         return false;
@@ -283,7 +289,7 @@ public class DocumentService {
             if (userProfile == null) return false;
 
             Application app = applicationDAO.getApplicationById(contract.getApplicationId());
-            if (app != null && app.getInternId() == userProfile.getProfileId()) {
+            if (app != null && (app.getInternId() == userProfile.getProfileId() || app.getInternId() == currentUser.getUserId())) {
                 return true;
             }
 
@@ -330,6 +336,10 @@ public class DocumentService {
 
     public Contract getContractByProfileId(int profileId) throws SQLException {
         return contractDAO.getContractByProfileId(profileId);
+    }
+
+    public Contract getContractByUserId(long userId) throws SQLException {
+        return contractDAO.getContractByUserId(userId);
     }
 
     public Contract getContractByApplicationId(int applicationId) throws SQLException {

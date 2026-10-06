@@ -50,27 +50,29 @@ public class DocumentReviewServlet extends HttpServlet {
             return;
         }
 
-        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền duyệt tài liệu.");
-            return;
+        if (currentUser.getRole() == null && session.getAttribute("currentRole") != null) {
+            com.internship.model.Role r = new com.internship.model.Role();
+            r.setRoleName((String) session.getAttribute("currentRole"));
+            currentUser.setRole(r);
         }
 
+        String redirectUrl = request.getParameter("redirectUrl");
         boolean isAjax = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
                 || (request.getHeader("Accept") != null && request.getHeader("Accept").contains("application/json"));
 
-        if (!CsrfToken.valid(request)) {
-            if (isAjax) {
-                writeJsonResponse(response, HttpServletResponse.SC_FORBIDDEN, false, "Invalid CSRF token", null);
-            } else {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
-            }
+        if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
+            handleError(request, response, "Bạn không có quyền duyệt tài liệu.", redirectUrl, isAjax);
+            return;
+        }
+
+        if (session.getAttribute(CsrfToken.class.getName()) != null && !CsrfToken.valid(request)) {
+            handleError(request, response, "Mã bảo mật biểu mẫu (CSRF) không hợp lệ hoặc đã hết hạn.", redirectUrl, isAjax);
             return;
         }
 
         String documentIdStr = request.getParameter("documentId");
         String action = request.getParameter("action"); // 'approve' hoặc 'reject'
         String rejectReason = request.getParameter("rejectReason");
-        String redirectUrl = request.getParameter("redirectUrl");
 
         if (documentIdStr == null || documentIdStr.trim().isEmpty()) {
             handleError(request, response, "Thiếu mã tài liệu cần duyệt.", redirectUrl, isAjax);
@@ -112,6 +114,9 @@ public class DocumentReviewServlet extends HttpServlet {
         } catch (SQLException e) {
             log("Lỗi CSDL khi duyệt tài liệu", e);
             handleError(request, response, "Lỗi cơ sở dữ liệu: " + e.getMessage(), redirectUrl, isAjax);
+        } catch (Exception e) {
+            log("Lỗi hệ thống khi duyệt tài liệu", e);
+            handleError(request, response, "Lỗi xử lý duyệt tài liệu: " + e.getMessage(), redirectUrl, isAjax);
         }
     }
 

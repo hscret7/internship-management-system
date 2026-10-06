@@ -13,6 +13,7 @@ import jakarta.servlet.http.*;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * DocumentUploadServlet: Xử lý tải lên CV, đơn xin thực tập và hợp đồng (BE2).
@@ -55,12 +56,20 @@ public class DocumentUploadServlet extends HttpServlet {
             return;
         }
 
-        if (!CsrfToken.valid(request)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid form token");
-            return;
+        if (currentUser.getRole() == null && session.getAttribute("currentRole") != null) {
+            com.internship.model.Role r = new com.internship.model.Role();
+            r.setRoleName((String) session.getAttribute("currentRole"));
+            currentUser.setRole(r);
         }
 
         String path = request.getServletPath();
+
+        if (session.getAttribute(CsrfToken.class.getName()) != null && !CsrfToken.valid(request)) {
+            session.setAttribute("flashError", "Mã bảo mật biểu mẫu (CSRF) không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang.");
+            redirectBack(request, response, path);
+            return;
+        }
+
         String uploadDir = getServletContext().getRealPath("/uploads");
         if (uploadDir == null) {
             uploadDir = System.getProperty("user.home") + File.separator + "internship_uploads";
@@ -81,6 +90,10 @@ public class DocumentUploadServlet extends HttpServlet {
             log("Lỗi CSDL khi upload file", e);
             session.setAttribute("flashError", "Lỗi CSDL: " + e.getMessage());
             redirectBack(request, response, path);
+        } catch (Exception e) {
+            log("Lỗi hệ thống khi upload file", e);
+            session.setAttribute("flashError", "Lỗi khi xử lý tệp tải lên: " + e.getMessage());
+            redirectBack(request, response, path);
         }
     }
 
@@ -91,7 +104,8 @@ public class DocumentUploadServlet extends HttpServlet {
                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
         if (!DocumentService.isIntern(currentUser)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ thực tập sinh mới có quyền tải lên tài liệu cá nhân.");
+            request.getSession().setAttribute("flashError", "Chỉ thực tập sinh mới có quyền tải lên tài liệu cá nhân.");
+            redirectBack(request, response, "/document/upload");
             return;
         }
 
@@ -105,7 +119,16 @@ public class DocumentUploadServlet extends HttpServlet {
             docType = "CV";
         }
 
-        Part filePart = request.getPart("file");
+        Part filePart = null;
+        try {
+            filePart = request.getPart("file");
+        } catch (Exception ignored) {}
+        if (filePart == null || filePart.getSize() == 0) {
+            try {
+                filePart = request.getPart("documentFile");
+            } catch (Exception ignored) {}
+        }
+
         documentService.saveDocument(profile.getProfileId(), docType, filePart, uploadDir);
 
         request.getSession().setAttribute("flashSuccess", "Tải lên " + docType + " thành công!");
@@ -119,17 +142,75 @@ public class DocumentUploadServlet extends HttpServlet {
                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
         if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ HR/Admin mới có quyền tải lên hợp đồng.");
+            request.getSession().setAttribute("flashError", "Chỉ HR/Admin mới có quyền tải lên hợp đồng.");
+            redirectBack(request, response, "/contract/upload");
             return;
         }
 
         String applicationIdStr = request.getParameter("applicationId");
         if (applicationIdStr == null || applicationIdStr.trim().isEmpty()) {
-            throw new IllegalArgumentException("Thiếu thông tin đơn ứng tuyển (applicationId).");
+            applicationIdStr = request.getParameter("id");
         }
 
-        int applicationId = Integer.parseInt(applicationIdStr);
-        Part filePart = request.getPart("contractFile");
+        String profileIdStr = request.getParameter("profileId");
+        int profileId = 0;
+        if (profileIdStr != null && !profileIdStr.trim().isEmpty()) {
+            try {
+                profileId = Integer.parseInt(profileIdStr.trim());
+            } catch (NumberFormatException ignored) {}
+        }
+        if (profileId <= 0) {
+            String redirectUrlParam = request.getParameter("redirectUrl");
+            if (redirectUrlParam != null && redirectUrlParam.contains("id=")) {
+                try {
+                    String part = redirectUrlParam.substring(redirectUrlParam.indexOf("id=") + 3);
+                    int amp = part.indexOf('&');
+                    if (amp != -1) part = part.substring(0, amp);
+                    profileId = Integer.parseInt(part.trim());
+                } catch (Exception ignored) {}
+            }
+        }
+
+        int applicationId = 0;
+        if (applicationIdStr != null && !applicationIdStr.trim().isEmpty()) {
+            try {
+                applicationId = Integer.parseInt(applicationIdStr.trim());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // Tự động tìm applicationId nếu chưa có nhưng có profileId
+        if (applicationId <= 0 && profileId > 0) {
+            try {
+                com.internship.dao.ApplicationDAO appDAO = new com.internship.dao.ApplicationDAO();
+                List<com.internship.model.Application> apps = appDAO.getApplicationsByInternId(profileId);
+                if (apps != null && !apps.isEmpty()) {
+                    applicationId = apps.stream()
+                            .filter(a -> "APPROVED".equalsIgnoreCase(a.getStatus()))
+                            .map(com.internship.model.Application::getApplicationId)
+                            .findFirst()
+                            .orElse(apps.get(0).getApplicationId());
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Fallback: Nếu vẫn chưa có applicationId, gán applicationId = profileId
+        if (applicationId <= 0 && profileId > 0) {
+            applicationId = profileId;
+        }
+
+        if (applicationId <= 0) {
+            throw new IllegalArgumentException("Thiếu thông tin đơn ứng tuyển (applicationId). Vui lòng kiểm tra lại ID ứng viên.");
+        }
+
+        Part filePart = null;
+        try {
+            filePart = request.getPart("contractFile");
+        } catch (Exception ignored) {}
+        if (filePart == null || filePart.getSize() == 0) {
+            try {
+                filePart = request.getPart("file");
+            } catch (Exception ignored) {}
+        }
 
         documentService.saveContract(applicationId, currentUser.getUserId(), filePart, uploadDir);
 

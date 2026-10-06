@@ -256,6 +256,7 @@
                                     <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
                                         <input type="hidden" name="csrfToken" value="${csrfToken}">
                                         <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
+                                        <input type="hidden" name="profileId" value="${profile.profileId}">
                                         <input type="hidden" name="applicationId" value="${contract.applicationId}">
                                         <div class="mb-3">
                                             <label class="form-label fw-semibold small">Thay thế file hợp đồng mới (PDF, Word, tối đa 5MB) <span class="text-danger">*</span></label>
@@ -275,9 +276,10 @@
                             <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
                                 <input type="hidden" name="csrfToken" value="${csrfToken}">
                                 <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
+                                <input type="hidden" name="profileId" value="${profile.profileId}">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold small">Mã đơn ứng tuyển (Application ID) <span class="text-danger">*</span></label>
-                                    <input type="number" name="applicationId" class="form-control form-control-sm" placeholder="Nhập ID đơn ứng tuyển đã duyệt (VD: 1)" required>
+                                    <input type="number" name="applicationId" value="${not empty application ? application.applicationId : (not empty contract ? contract.applicationId : profile.profileId)}" class="form-control form-control-sm" placeholder="Nhập ID đơn ứng tuyển đã duyệt (VD: 1)" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold small">Chọn file hợp đồng (PDF, Word, tối đa 5MB) <span class="text-danger">*</span></label>
