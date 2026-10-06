@@ -347,6 +347,10 @@ class DocumentServiceTest {
 
             DummyPart pngPart = new DummyPart("image.png", new byte[]{1, 2, 3}, "image/png");
             assertThrows(IllegalArgumentException.class, () -> documentService.validateFile(pngPart));
+
+            // QA-09: Chặn file giả mạo PDF với Content-Type text/plain hoặc marker giả
+            DummyPart disguisedPart = new DummyPart("qa-disguised.pdf", "NOT_A_PDF_QA_MARKER".getBytes(), "text/plain");
+            assertThrows(IllegalArgumentException.class, () -> documentService.validateFile(disguisedPart));
         }
 
         @Test

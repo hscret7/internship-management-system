@@ -16,8 +16,8 @@ public class InternProfileService {
 
     private final InternProfileDAO profileDAO;
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^(0|\\+84)[0-9]{9,10}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9]+([._%+-][A-Za-z0-9]+)*@([A-Za-z0-9]+([.-][A-Za-z0-9]+)*\\.[A-Za-z]{2,})$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^(0|\\+84)[0-9]{9}$");
 
     public InternProfileService() {
         this.profileDAO = new InternProfileDAO();
@@ -57,7 +57,7 @@ public class InternProfileService {
         if (profile.getPhone() == null || profile.getPhone().trim().isEmpty()) {
             errors.add("Số điện thoại là thông tin bắt buộc.");
         } else if (!PHONE_PATTERN.matcher(profile.getPhone().trim()).matches()) {
-            errors.add("Số điện thoại không hợp lệ (cần 10 chữ số, bắt đầu bằng 0 hoặc +84).");
+            errors.add("Số điện thoại không hợp lệ (cần đúng 10 chữ số, bắt đầu bằng 0 hoặc +84).");
         }
 
         // 4. Kiểm tra Trường & Ngành học
@@ -70,7 +70,7 @@ public class InternProfileService {
 
         // 5. Kiểm tra GPA (nếu có nhập)
         if (profile.getGpa() != null) {
-            if (profile.getGpa() < 0.0 || profile.getGpa() > 4.0) {
+            if (Double.isNaN(profile.getGpa()) || Double.isInfinite(profile.getGpa()) || profile.getGpa() < 0.0 || profile.getGpa() > 4.0) {
                 errors.add("Điểm GPA hệ 4 phải nằm trong khoảng từ 0.0 đến 4.0.");
             }
         }
@@ -164,9 +164,7 @@ public class InternProfileService {
             throw new IllegalArgumentException("Không có quyền chỉnh sửa hồ sơ của người dùng khác.");
         }
         profile.setUserId(existing.getUserId());
-        if (profile.getStatus() == null) {
-            profile.setStatus(existing.getStatus());
-        }
+        profile.setStatus(existing.getStatus());
 
         return profileDAO.updateProfile(profile);
     }
@@ -194,17 +192,33 @@ public class InternProfileService {
         }
 
         // Áp dụng whitelist an toàn: chỉ cập nhật thông tin cá nhân và học vấn
-        existing.setFullName(input.getFullName() != null ? input.getFullName().trim() : null);
-        existing.setDob(input.getDob());
+        if (input.getFullName() != null && !input.getFullName().trim().isEmpty()) {
+            existing.setFullName(input.getFullName().trim());
+        }
+        if (input.getDob() != null) {
+            existing.setDob(input.getDob());
+        }
         if (input.getGender() != null && !input.getGender().trim().isEmpty()) {
             existing.setGender(input.getGender().trim());
         }
-        existing.setPhone(input.getPhone() != null ? input.getPhone().trim() : null);
-        existing.setEmail(input.getEmail() != null ? input.getEmail().trim() : null);
-        existing.setUniversity(input.getUniversity() != null ? input.getUniversity().trim() : null);
-        existing.setMajor(input.getMajor() != null ? input.getMajor().trim() : null);
-        existing.setGpa(input.getGpa());
-        existing.setSkills(input.getSkills());
+        if (input.getPhone() != null && !input.getPhone().trim().isEmpty()) {
+            existing.setPhone(input.getPhone().trim());
+        }
+        if (input.getEmail() != null && !input.getEmail().trim().isEmpty()) {
+            existing.setEmail(input.getEmail().trim());
+        }
+        if (input.getUniversity() != null && !input.getUniversity().trim().isEmpty()) {
+            existing.setUniversity(input.getUniversity().trim());
+        }
+        if (input.getMajor() != null && !input.getMajor().trim().isEmpty()) {
+            existing.setMajor(input.getMajor().trim());
+        }
+        if (input.getGpa() != null) {
+            existing.setGpa(input.getGpa());
+        }
+        if (input.getSkills() != null) {
+            existing.setSkills(input.getSkills());
+        }
 
         // Validate lại toàn bộ dữ liệu trước khi lưu
         List<String> errors = validateProfile(existing);

@@ -42,7 +42,7 @@
 
                     <!-- Nút chuyển trạng thái hồ sơ (BE2 Logic) -->
                     <div class="border-top pt-3">
-                        <form action="${pageContext.request.contextPath}/intern/profile" method="post">
+                        <form action="${pageContext.request.contextPath}/hr/intern-detail" method="post">
                             <input type="hidden" name="csrfToken" value="${csrfToken}">
                             <input type="hidden" name="action" value="update_status">
                             <input type="hidden" name="profileId" value="${profile.profileId}">

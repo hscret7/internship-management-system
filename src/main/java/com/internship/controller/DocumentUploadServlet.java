@@ -64,9 +64,8 @@ public class DocumentUploadServlet extends HttpServlet {
 
         String path = request.getServletPath();
 
-        if (session.getAttribute(CsrfToken.class.getName()) != null && !CsrfToken.valid(request)) {
-            session.setAttribute("flashError", "Mã bảo mật biểu mẫu (CSRF) không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang.");
-            redirectBack(request, response, path);
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid or missing CSRF token");
             return;
         }
 
@@ -101,7 +100,7 @@ public class DocumentUploadServlet extends HttpServlet {
      * Upload CV hoặc Đơn xin thực tập (US04 - BE2).
      */
     private void handleUploadDocument(HttpServletRequest request, HttpServletResponse response, 
-                                     User currentUser, String uploadDir) 
+                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
         if (!DocumentService.isIntern(currentUser)) {
             request.getSession().setAttribute("flashError", "Chỉ thực tập sinh mới có quyền tải lên tài liệu cá nhân.");
@@ -117,6 +116,12 @@ public class DocumentUploadServlet extends HttpServlet {
         String docType = request.getParameter("documentType");
         if (docType == null || docType.trim().isEmpty()) {
             docType = "CV";
+        } else {
+            docType = docType.trim().toUpperCase();
+        }
+
+        if (!DocumentService.ALLOWED_DOCUMENT_TYPES.contains(docType)) {
+            throw new IllegalArgumentException("Loại tài liệu không hợp lệ: " + docType + ". Chỉ chấp nhận: " + String.join(", ", DocumentService.ALLOWED_DOCUMENT_TYPES));
         }
 
         Part filePart = null;
@@ -230,19 +235,23 @@ public class DocumentUploadServlet extends HttpServlet {
 
         request.getSession().setAttribute("flashSuccess", "Tải lên hợp đồng thành công!");
         String redirectUrl = request.getParameter("redirectUrl");
-        if (redirectUrl != null && !redirectUrl.isEmpty()) {
-            response.sendRedirect(redirectUrl);
-        } else {
-            response.sendRedirect(request.getContextPath() + "/hr/interns");
-        }
+        String safeRedirect = InternProfileServlet.getSafeRedirectUrl(request, redirectUrl, request.getContextPath() + "/hr/interns");
+        response.sendRedirect(safeRedirect);
     }
 
     private void redirectBack(HttpServletRequest request, HttpServletResponse response, String path) throws IOException {
         String referer = request.getHeader("Referer");
-        if (referer != null && !referer.isEmpty()) {
-            response.sendRedirect(referer);
-        } else {
-            response.sendRedirect(request.getContextPath() + ("/contract/upload".equals(path) ? "/hr/interns" : "/intern/profile"));
+        if (referer != null && !referer.trim().isEmpty()) {
+            try {
+                java.net.URI refUri = java.net.URI.create(referer);
+                String refPath = refUri.getPath();
+                if (refPath != null && refPath.startsWith(request.getContextPath())) {
+                    String query = refUri.getQuery();
+                    response.sendRedirect(refPath + (query != null ? "?" + query : ""));
+                    return;
+                }
+            } catch (Exception ignored) {}
         }
+        response.sendRedirect(request.getContextPath() + ("/contract/upload".equals(path) ? "/hr/interns" : "/intern/profile"));
     }
 }

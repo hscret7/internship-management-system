@@ -50,8 +50,14 @@ public class InternProfileDAO {
     }
 
     public boolean updateProfile(InternProfile profile) throws SQLException {
-        String sql = "UPDATE intern_profiles SET full_name = ?, dob = ?, gender = ?, phone = ?, email = ?, "
-                   + "university = ?, major = ?, gpa = ?, skills = ?, status = ? WHERE profile_id = ?";
+        String sql;
+        if (profile.getUserId() > 0) {
+            sql = "UPDATE intern_profiles SET full_name = ?, dob = ?, gender = ?, phone = ?, email = ?, "
+                + "university = ?, major = ?, gpa = ?, skills = ? WHERE profile_id = ? AND user_id = ?";
+        } else {
+            sql = "UPDATE intern_profiles SET full_name = ?, dob = ?, gender = ?, phone = ?, email = ?, "
+                + "university = ?, major = ?, gpa = ?, skills = ? WHERE profile_id = ?";
+        }
         
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -69,8 +75,10 @@ public class InternProfileDAO {
                 ps.setNull(8, Types.DECIMAL);
             }
             ps.setString(9, profile.getSkills());
-            ps.setString(10, profile.getStatus());
-            ps.setInt(11, profile.getProfileId());
+            ps.setInt(10, profile.getProfileId());
+            if (profile.getUserId() > 0) {
+                ps.setLong(11, profile.getUserId());
+            }
 
             return ps.executeUpdate() > 0;
         }

@@ -61,12 +61,12 @@ public class DocumentReviewServlet extends HttpServlet {
                 || (request.getHeader("Accept") != null && request.getHeader("Accept").contains("application/json"));
 
         if (!DocumentService.isHR(currentUser) && !DocumentService.isAdmin(currentUser)) {
-            handleError(request, response, "Bạn không có quyền duyệt tài liệu.", redirectUrl, isAjax);
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền duyệt tài liệu.");
             return;
         }
 
-        if (session.getAttribute(CsrfToken.class.getName()) != null && !CsrfToken.valid(request)) {
-            handleError(request, response, "Mã bảo mật biểu mẫu (CSRF) không hợp lệ hoặc đã hết hạn.", redirectUrl, isAjax);
+        if (!CsrfToken.valid(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid or missing CSRF token");
             return;
         }
 
@@ -75,15 +75,19 @@ public class DocumentReviewServlet extends HttpServlet {
         String rejectReason = request.getParameter("rejectReason");
 
         if (documentIdStr == null || documentIdStr.trim().isEmpty()) {
-            handleError(request, response, "Thiếu mã tài liệu cần duyệt.", redirectUrl, isAjax);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thiếu mã tài liệu cần duyệt.");
             return;
         }
 
         int documentId;
         try {
             documentId = Integer.parseInt(documentIdStr.trim());
+            if (documentId <= 0) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã tài liệu không hợp lệ.");
+                return;
+            }
         } catch (NumberFormatException e) {
-            handleError(request, response, "Mã tài liệu không hợp lệ.", redirectUrl, isAjax);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã tài liệu không hợp lệ.");
             return;
         }
 
@@ -109,7 +113,13 @@ public class DocumentReviewServlet extends HttpServlet {
             } else {
                 handleError(request, response, "Hành động duyệt tài liệu không hợp lệ (chỉ chấp nhận 'approve' hoặc 'reject').", redirectUrl, isAjax);
             }
-        } catch (IllegalArgumentException | IllegalAccessException | IllegalStateException e) {
+        } catch (IllegalStateException e) {
+            if (isAjax) {
+                writeJsonResponse(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage(), null);
+            } else {
+                handleError(request, response, e.getMessage(), redirectUrl, isAjax);
+            }
+        } catch (IllegalArgumentException | IllegalAccessException e) {
             handleError(request, response, e.getMessage(), redirectUrl, isAjax);
         } catch (SQLException e) {
             log("Lỗi CSDL khi duyệt tài liệu", e);
@@ -131,16 +141,24 @@ public class DocumentReviewServlet extends HttpServlet {
     }
 
     private void doRedirect(HttpServletRequest request, HttpServletResponse response, String redirectUrl) throws IOException {
-        if (redirectUrl != null && !redirectUrl.trim().isEmpty()) {
-            response.sendRedirect(redirectUrl);
-        } else {
-            String referer = request.getHeader("Referer");
-            if (referer != null && !referer.trim().isEmpty()) {
-                response.sendRedirect(referer);
-            } else {
-                response.sendRedirect(request.getContextPath() + "/hr/interns");
-            }
+        String safeUrl = InternProfileServlet.getSafeRedirectUrl(request, redirectUrl, null);
+        if (safeUrl != null) {
+            response.sendRedirect(safeUrl);
+            return;
         }
+        String referer = request.getHeader("Referer");
+        if (referer != null && !referer.trim().isEmpty()) {
+            try {
+                java.net.URI refUri = java.net.URI.create(referer);
+                String refPath = refUri.getPath();
+                if (refPath != null && refPath.startsWith(request.getContextPath())) {
+                    String query = refUri.getQuery();
+                    response.sendRedirect(refPath + (query != null ? "?" + query : ""));
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+        response.sendRedirect(request.getContextPath() + "/hr/interns");
     }
 
     private void writeJsonResponse(HttpServletResponse response, int statusCode, boolean success, 

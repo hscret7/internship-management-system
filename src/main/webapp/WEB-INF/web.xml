@@ -28,4 +28,12 @@
         <location>/WEB-INF/views/error/500.jsp</location>
     </error-page>
 
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Direct Uploads Access Blocked</web-resource-name>
+            <url-pattern>/uploads/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint/>
+    </security-constraint>
+
 </web-app>

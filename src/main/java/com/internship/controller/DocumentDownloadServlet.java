@@ -79,7 +79,18 @@ public class DocumentDownloadServlet extends HttpServlet {
             return;
         }
 
-        int documentId = Integer.parseInt(idStr);
+        int documentId;
+        try {
+            documentId = Integer.parseInt(idStr.trim());
+            if (documentId <= 0) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã tài liệu không hợp lệ.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã tài liệu không hợp lệ.");
+            return;
+        }
+
         Document doc = documentService.getDocumentById(documentId);
 
         if (doc == null) {
@@ -107,7 +118,18 @@ public class DocumentDownloadServlet extends HttpServlet {
             return;
         }
 
-        int contractId = Integer.parseInt(idStr);
+        int contractId;
+        try {
+            contractId = Integer.parseInt(idStr.trim());
+            if (contractId <= 0) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+            return;
+        }
+
         Contract contract = documentService.getContractById(contractId);
 
         if (contract == null) {

@@ -41,6 +41,11 @@ public class AuthenticationFilter implements Filter {
                 || path.startsWith("/assets/")
                 || path.equals("/favicon.ico");
 
+        if (path.startsWith("/uploads/")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Direct access to uploads directory is forbidden.");
+            return;
+        }
+
         if (publicRequest) {
             chain.doFilter(request, response);
             return;

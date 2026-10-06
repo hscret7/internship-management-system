@@ -180,9 +180,7 @@ public class DocumentDAO {
                 }
             }
 
-            // Kiểm tra xem tài liệu đã có trạng thái APPROVED trước đó chưa
-            Document doc = getDocumentById(documentId);
-            return doc != null && "APPROVED".equalsIgnoreCase(doc.getStatus());
+            return false;
         }
     }
 
@@ -233,8 +231,7 @@ public class DocumentDAO {
                 }
             }
 
-            Document doc = getDocumentById(documentId);
-            return doc != null && "REJECTED".equalsIgnoreCase(doc.getStatus());
+            return false;
         }
     }
 

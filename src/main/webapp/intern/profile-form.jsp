@@ -37,7 +37,7 @@
             <div class="mb-3">
                 <label class="form-label" for="fullName">Họ và tên <span class="req">*</span></label>
                 <input type="text" id="fullName" name="fullName" class="form-control"
-                       value="${not empty profile.fullName ? profile.fullName : currentUser.fullName}" required maxlength="100"
+                       value="<c:out value='${not empty profile.fullName ? profile.fullName : currentUser.fullName}'/>" required maxlength="100"
                        placeholder="Nguyễn Văn Nam">
             </div>
 
@@ -60,14 +60,14 @@
                 <div class="col-md-6">
                     <label class="form-label" for="phone">Số điện thoại <span class="req">*</span></label>
                     <input type="tel" id="phone" name="phone" class="form-control"
-                           value="${profile.phone}" required
+                       value="<c:out value='${profile.phone}'/>" required
                            pattern="[0-9+ .()\-]{9,15}" placeholder="0912345678">
                     <span class="form-text">Từ 9 đến 15 ký tự số.</span>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="email">Email liên hệ <span class="req">*</span></label>
                     <input type="email" id="email" name="email" class="form-control"
-                           value="${not empty profile.email ? profile.email : currentUser.email}" required placeholder="nam@student.edu.vn">
+                       value="<c:out value='${not empty profile.email ? profile.email : currentUser.email}'/>" required placeholder="nam@student.edu.vn">
                 </div>
             </div>
 
@@ -75,7 +75,7 @@
                 <div class="col-md-8">
                     <label class="form-label" for="university">Trường đại học / cao đẳng <span class="req">*</span></label>
                     <input type="text" id="university" name="university" class="form-control"
-                           value="${profile.university}" required maxlength="150"
+                       value="<c:out value='${profile.university}'/>" required maxlength="150"
                            placeholder="Đại học Bách Khoa Hà Nội">
                 </div>
                 <div class="col-md-4">
@@ -88,7 +88,7 @@
             <div class="mb-3">
                 <label class="form-label" for="major">Chuyên ngành <span class="req">*</span></label>
                 <input type="text" id="major" name="major" class="form-control"
-                       value="${profile.major}" required maxlength="100"
+                       value="<c:out value='${profile.major}'/>" required maxlength="100"
                        placeholder="Công nghệ thông tin">
             </div>
 
@@ -96,7 +96,7 @@
                 <label class="form-label" for="skills">Kỹ năng / mô tả bản thân</label>
                 <textarea id="skills" name="skills" rows="4" class="form-control"
                           maxlength="1000"
-                          placeholder="Java, Servlet, MySQL, Git...">${profile.skills}</textarea>
+                          placeholder="Java, Servlet, MySQL, Git..."><c:out value="${profile.skills}"/></textarea>
             </div>
 
         </div>

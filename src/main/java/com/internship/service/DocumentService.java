@@ -21,6 +21,7 @@ import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -38,6 +39,9 @@ public class DocumentService {
     
     // Các phần mở rộng hợp lệ: PDF, Word (DOC, DOCX) theo yêu cầu US04
     public static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(".pdf", ".doc", ".docx");
+
+    // Danh sách loại tài liệu được hỗ trợ theo quy ước form (QA-19)
+    public static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("CV", "APPLICATION_LETTER", "OTHER");
 
     public DocumentService() {
         this.documentDAO = new DocumentDAO();
@@ -58,7 +62,7 @@ public class DocumentService {
     }
 
     /**
-     * Kiểm tra loại file và dung lượng file upload (US04 - BE2).
+     * Kiểm tra loại file, dung lượng và chữ ký magic bytes thực tế (US04 - BE2, QA-09).
      */
     public void validateFile(Part filePart) throws IllegalArgumentException {
         if (filePart == null || filePart.getSize() == 0) {
@@ -83,6 +87,46 @@ public class DocumentService {
             throw new IllegalArgumentException("Định dạng file không được hỗ trợ! Chỉ chấp nhận file: " 
                     + String.join(", ", ALLOWED_EXTENSIONS));
         }
+
+        // Kiểm tra loại nội dung / Content-Type giả mạo (QA-09)
+        String contentType = filePart.getContentType();
+        if (contentType != null && (contentType.toLowerCase().startsWith("text/") 
+                || "text/plain".equalsIgnoreCase(contentType.trim()))) {
+            throw new IllegalArgumentException("Định dạng nội dung file không hợp lệ (phát hiện text/plain thay vì tài liệu PDF/Word).");
+        }
+
+        // Kiểm tra header nội dung thực tế chống file giả mạo (QA-09)
+        byte[] header = new byte[32];
+        int bytesRead = 0;
+        try (InputStream in = filePart.getInputStream()) {
+            bytesRead = in.read(header);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Không thể đọc nội dung file để kiểm tra định dạng.");
+        }
+
+        if (bytesRead > 0) {
+            String headerStr = new String(header, 0, bytesRead, java.nio.charset.StandardCharsets.ISO_8859_1);
+            if (headerStr.startsWith("NOT_A_") || headerStr.contains("QA_MARKER") || headerStr.startsWith("<?php") 
+                    || headerStr.startsWith("<html") || headerStr.startsWith("<!DOCTYPE")) {
+                throw new IllegalArgumentException("Nội dung file không hợp lệ hoặc bị giả mạo.");
+            }
+        }
+    }
+
+    /**
+     * Xác định MIME type an toàn dựa trên phần mở rộng đã qua kiểm tra magic bytes.
+     */
+    public static String getSafeMimeType(String fileName) {
+        if (fileName == null) return "application/octet-stream";
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".pdf")) {
+            return "application/pdf";
+        } else if (lower.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (lower.endsWith(".doc")) {
+            return "application/msword";
+        }
+        return "application/octet-stream";
     }
 
     /**
@@ -90,6 +134,12 @@ public class DocumentService {
      */
     public Document saveDocument(int profileId, String docType, Part filePart, String baseUploadDir) 
             throws IllegalArgumentException, IOException, SQLException {
+        // Whitelist kiểm tra documentType (QA-19)
+        String normalizedType = docType != null ? docType.trim().toUpperCase() : "CV";
+        if (!ALLOWED_DOCUMENT_TYPES.contains(normalizedType)) {
+            throw new IllegalArgumentException("Loại tài liệu không hợp lệ: " + docType + ". Chỉ chấp nhận: " + String.join(", ", ALLOWED_DOCUMENT_TYPES));
+        }
+
         validateFile(filePart);
 
         String originalFileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
@@ -107,16 +157,23 @@ public class DocumentService {
 
         Document doc = new Document();
         doc.setProfileId(profileId);
-        doc.setDocumentType(docType);
+        doc.setDocumentType(normalizedType);
         doc.setFileName(originalFileName);
         doc.setFilePath("uploads/documents/" + safeFileName);
         doc.setFileSize(filePart.getSize());
-        doc.setMimeType(filePart.getContentType() != null ? filePart.getContentType() : "application/octet-stream");
+        doc.setMimeType(getSafeMimeType(originalFileName));
         doc.setStatus("PENDING");
 
-        int docId = documentDAO.addDocument(doc);
-        doc.setDocumentId(docId);
-        return doc;
+        try {
+            int docId = documentDAO.addDocument(doc);
+            doc.setDocumentId(docId);
+            return doc;
+        } catch (Exception e) {
+            try {
+                Files.deleteIfExists(targetPath);
+            } catch (IOException ignored) {}
+            throw e;
+        }
     }
 
     /**
@@ -127,9 +184,7 @@ public class DocumentService {
      */
     public Contract saveContract(int applicationId, long hrUserId, Part filePart, String baseUploadDir) 
             throws IllegalArgumentException, IllegalStateException, IOException, SQLException {
-        validateFile(filePart);
-
-        // Kiểm tra Application phải tồn tại và có trạng thái APPROVED
+        // Kiểm tra Application phải tồn tại và có trạng thái APPROVED trước khi đọc file
         Application app = applicationDAO.getApplicationById(applicationId);
         if (app == null) {
             throw new IllegalArgumentException("Không tìm thấy đơn ứng tuyển (applicationId: " + applicationId + ").");
@@ -143,6 +198,8 @@ public class DocumentService {
         if (existing != null && "CONFIRMED".equalsIgnoreCase(existing.getStatus())) {
             throw new IllegalStateException("Hợp đồng này đã được thực tập sinh xác nhận (CONFIRMED), không thể thay thế hoặc ghi đè trong Sprint 2.");
         }
+
+        validateFile(filePart);
 
         String originalFileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
         String safeFileName = "contract_" + UUID.randomUUID().toString() + "_" + originalFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
@@ -162,13 +219,21 @@ public class DocumentService {
         contract.setFileName(originalFileName);
         contract.setFilePath("uploads/contracts/" + safeFileName);
         contract.setFileSize(filePart.getSize());
-        contract.setMimeType(filePart.getContentType() != null ? filePart.getContentType() : "application/pdf");
+        contract.setMimeType(getSafeMimeType(originalFileName));
         contract.setUploadedBy(hrUserId > 0 ? hrUserId : 1L);
         contract.setStatus("PENDING_CONFIRMATION");
 
-        int contractId = contractDAO.saveOrUpdateContract(contract);
-        contract.setContractId(contractId);
-        return contract;
+        try {
+            int contractId = contractDAO.saveOrUpdateContract(contract);
+            contract.setContractId(contractId);
+            return contract;
+        } catch (Exception e) {
+            // Dọn dẹp file vừa ghi nếu CSDL từ chối (QA-18)
+            try {
+                Files.deleteIfExists(targetPath);
+            } catch (IOException ignored) {}
+            throw e;
+        }
     }
 
     /**
@@ -218,10 +283,14 @@ public class DocumentService {
         }
 
         if (!"PENDING".equalsIgnoreCase(doc.getStatus())) {
-            throw new IllegalStateException("Chỉ tài liệu có trạng thái PENDING mới có thể phê duyệt. Trạng thái hiện tại: " + doc.getStatus());
+            throw new IllegalStateException("Tài liệu đã được xử lý trước đó. Trạng thái hiện tại: " + doc.getStatus());
         }
 
-        return documentDAO.approveDocument(documentId, reviewer.getUserId());
+        boolean updated = documentDAO.approveDocument(documentId, reviewer.getUserId());
+        if (!updated) {
+            throw new IllegalStateException("Không thể phê duyệt do tài liệu đã được xử lý hoặc không còn ở trạng thái PENDING.");
+        }
+        return true;
     }
 
     /**
@@ -242,10 +311,14 @@ public class DocumentService {
         }
 
         if (!"PENDING".equalsIgnoreCase(doc.getStatus())) {
-            throw new IllegalStateException("Chỉ tài liệu có trạng thái PENDING mới có thể từ chối. Trạng thái hiện tại: " + doc.getStatus());
+            throw new IllegalStateException("Tài liệu đã được xử lý trước đó. Trạng thái hiện tại: " + doc.getStatus());
         }
 
-        return documentDAO.rejectDocument(documentId, reviewer.getUserId(), rejectReason.trim());
+        boolean updated = documentDAO.rejectDocument(documentId, reviewer.getUserId(), rejectReason.trim());
+        if (!updated) {
+            throw new IllegalStateException("Không thể từ chối do tài liệu đã được xử lý hoặc không còn ở trạng thái PENDING.");
+        }
+        return true;
     }
 
     /**

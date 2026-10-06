@@ -69,6 +69,35 @@ public class ContractServlet extends HttpServlet {
                 idStr = request.getParameter("contractId");
             }
 
+            Integer parsedContractId = null;
+            if (idStr != null && !idStr.trim().isEmpty()) {
+                try {
+                    parsedContractId = Integer.parseInt(idStr.trim());
+                    if (parsedContractId <= 0) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+                    return;
+                }
+            }
+
+            String profileIdStr = request.getParameter("profileId");
+            Integer parsedProfileId = null;
+            if (profileIdStr != null && !profileIdStr.trim().isEmpty()) {
+                try {
+                    parsedProfileId = Integer.parseInt(profileIdStr.trim());
+                    if (parsedProfileId <= 0) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hồ sơ không hợp lệ.");
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hồ sơ không hợp lệ.");
+                    return;
+                }
+            }
+
             if (DocumentService.isIntern(currentUser)) {
                 InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
                 if (profile != null) {
@@ -77,26 +106,18 @@ public class ContractServlet extends HttpServlet {
                 if (contract == null) {
                     contract = documentService.getContractByUserId(currentUser.getUserId());
                 }
-                if (contract == null && idStr != null && !idStr.trim().isEmpty()) {
-                    try {
-                        int cId = Integer.parseInt(idStr.trim());
-                        Contract specified = documentService.getContractById(cId);
-                        if (specified != null && documentService.canUserAccessContract(currentUser, specified)) {
-                            contract = specified;
-                        }
-                    } catch (NumberFormatException ignored) {}
+                if (contract == null && parsedContractId != null) {
+                    Contract specified = documentService.getContractById(parsedContractId);
+                    if (specified != null && documentService.canUserAccessContract(currentUser, specified)) {
+                        contract = specified;
+                    }
                 }
             } else if (DocumentService.isHR(currentUser) || DocumentService.isAdmin(currentUser)) {
-                if (idStr != null && !idStr.trim().isEmpty()) {
-                    try {
-                        contract = documentService.getContractById(Integer.parseInt(idStr.trim()));
-                    } catch (NumberFormatException ignored) {}
+                if (parsedContractId != null) {
+                    contract = documentService.getContractById(parsedContractId);
                 }
-                String profileIdStr = request.getParameter("profileId");
-                if (contract == null && profileIdStr != null && !profileIdStr.trim().isEmpty()) {
-                    try {
-                        contract = documentService.getContractByProfileId(Integer.parseInt(profileIdStr.trim()));
-                    } catch (NumberFormatException ignored) {}
+                if (contract == null && parsedProfileId != null) {
+                    contract = documentService.getContractByProfileId(parsedProfileId);
                 }
             }
 
@@ -140,9 +161,8 @@ public class ContractServlet extends HttpServlet {
                 return;
             }
 
-            if (session.getAttribute(CsrfToken.class.getName()) != null && !CsrfToken.valid(request)) {
-                session.setAttribute("flashError", "Mã bảo mật biểu mẫu (CSRF) không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang.");
-                response.sendRedirect(request.getContextPath() + "/contract/view");
+            if (!CsrfToken.valid(request)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid or missing CSRF token");
                 return;
             }
 
@@ -171,8 +191,19 @@ public class ContractServlet extends HttpServlet {
                 return;
             }
 
+            int contractId;
             try {
-                int contractId = Integer.parseInt(contractIdStr.trim());
+                contractId = Integer.parseInt(contractIdStr.trim());
+                if (contractId <= 0) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã hợp đồng không hợp lệ.");
+                return;
+            }
+
+            try {
                 documentService.confirmContract(contractId, currentUser);
                 session.setAttribute("flashSuccess", "Bạn đã xác nhận hợp đồng thực tập thành công trên hệ thống!");
             } catch (IllegalAccessException | IllegalArgumentException | IllegalStateException e) {
