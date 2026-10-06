@@ -1,5 +1,6 @@
 package com.internship.filter;
 
+import com.internship.util.CsrfToken;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -66,6 +67,8 @@ public class AuthenticationFilter implements Filter {
             );
             return;
         }
+
+        CsrfToken.expose(request);
 
         chain.doFilter(request, response);
     }

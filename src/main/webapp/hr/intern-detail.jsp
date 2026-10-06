@@ -288,25 +288,39 @@
                             </c:choose>
                         </c:when>
                         <c:otherwise>
-                            <p class="small text-muted mb-3">
-                                Hợp đồng là tài liệu riêng. Sau khi ứng viên được duyệt đơn (APPROVED), HR tải lên bản hợp đồng để thực tập sinh xem và xác nhận.
-                            </p>
-                            <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
-                                <input type="hidden" name="csrfToken" value="${csrfToken}">
-                                <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
-                                <input type="hidden" name="profileId" value="${profile.profileId}">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold small">Mã đơn ứng tuyển (Application ID) <span class="text-danger">*</span></label>
-                                    <input type="number" name="applicationId" value="${not empty application ? application.applicationId : (not empty contract ? contract.applicationId : profile.profileId)}" class="form-control form-control-sm" placeholder="Nhập ID đơn ứng tuyển đã duyệt (VD: 1)" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold small">Chọn file hợp đồng (PDF, Word, tối đa 5MB) <span class="text-danger">*</span></label>
-                                    <input type="file" name="contractFile" class="form-control form-control-sm" accept=".pdf,.doc,.docx" required>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">
-                                    <i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải lên Hợp đồng cho ứng viên
-                                </button>
-                            </form>
+                            <c:choose>
+                                <c:when test="${not empty application and application.status eq 'APPROVED'}">
+                                    <p class="small text-muted mb-3">
+                                        Sau khi ứng viên được duyệt đơn (APPROVED), HR tải lên bản hợp đồng để thực tập sinh xem và xác nhận.
+                                    </p>
+                                    <form action="${pageContext.request.contextPath}/contract/upload" method="post" enctype="multipart/form-data">
+                                        <input type="hidden" name="csrfToken" value="${csrfToken}">
+                                        <input type="hidden" name="redirectUrl" value="${pageContext.request.contextPath}/hr/intern-detail?id=${profile.profileId}">
+                                        <input type="hidden" name="profileId" value="${profile.profileId}">
+                                        <input type="hidden" name="applicationId" value="${application.applicationId}">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold small">Mã đơn ứng tuyển (Application ID)</label>
+                                            <input type="text" class="form-control form-control-sm bg-light" value="#${application.applicationId} (APPROVED)" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold small">Chọn file hợp đồng (PDF, Word, tối đa 5MB) <span class="text-danger">*</span></label>
+                                            <input type="file" name="contractFile" class="form-control form-control-sm" accept=".pdf,.doc,.docx" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">
+                                            <i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải lên Hợp đồng cho ứng viên
+                                        </button>
+                                    </form>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="alert alert-warning py-3 small mb-0">
+                                        <i class="bi bi-exclamation-triangle-fill me-2 fs-6"></i>
+                                        <strong>Chưa có đơn ứng tuyển được duyệt (APPROVED).</strong>
+                                        <div class="mt-1 text-muted">
+                                            Hồ sơ này chưa có đơn ứng tuyển được duyệt. Chỉ được phép tải lên hợp đồng sau khi đơn ứng tuyển chuyển sang trạng thái <strong>APPROVED</strong>.
+                                        </div>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
                         </c:otherwise>
                     </c:choose>
                 </div>
