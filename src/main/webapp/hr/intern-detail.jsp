@@ -109,12 +109,30 @@
                         <div class="col-sm-4 text-muted">Kỹ năng chuyên môn:</div>
                         <div class="col-sm-8"><c:out value="${profile.skills}" /></div>
                     </div>
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Trạng thái hồ sơ:</div>
                         <div class="col-sm-8">
                             <span class="badge ${profile.status == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}">
                                 <c:out value="${profile.status}" />
                             </span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4 text-muted">Đơn ứng tuyển:</div>
+                        <div class="col-sm-8">
+                            <c:choose>
+                                <c:when test="${not empty application}">
+                                    <span class="badge ${application.status eq 'APPROVED' ? 'bg-success' : (application.status eq 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}">
+                                        Mã #${application.applicationId} - <c:out value="${application.status}" />
+                                    </span>
+                                    <a href="${pageContext.request.contextPath}/hr/applications?action=detail&id=${application.applicationId}" class="btn btn-link btn-sm p-0 ms-2">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Xem và xét duyệt tại mục Duyệt hồ sơ
+                                    </a>
+                                </c:when>
+                                <c:otherwise>
+                                    <span class="badge bg-secondary">Chưa có đơn ứng tuyển</span>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                 </div>

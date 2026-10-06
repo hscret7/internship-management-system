@@ -19,7 +19,7 @@
 
     <c:choose>
 
-        <c:when test="${empty profile}">
+        <c:when test="${empty profile or empty profile.profileId or profile.profileId == 0}">
             <div class="card-body">
                 <div class="empty-state">
                     <i class="bi bi-person-plus"></i>
@@ -136,6 +136,71 @@
                 </div>
             </c:otherwise>
 
+        </c:choose>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Đơn ứng tuyển (Tuyển dụng)</span>
+        <c:if test="${not empty application}">
+            <span class="badge-status
+                ${application.status eq 'APPROVED' ? 'badge-status--ok'
+                  : (application.status eq 'REJECTED' ? 'badge-status--bad'
+                  : 'badge-status--pending')}">
+                <c:out value="${application.status}" />
+            </span>
+        </c:if>
+    </div>
+    <div class="card-body">
+        <c:choose>
+            <c:when test="${not empty application}">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">Mã đơn: #<c:out value="${application.applicationId}" /></div>
+                        <div class="small text-muted mt-1">
+                            Trạng thái: 
+                            <c:choose>
+                                <c:when test="${application.status eq 'PENDING'}">
+                                    <span class="text-warning fw-semibold">Đang chờ HR xét duyệt</span>
+                                </c:when>
+                                <c:when test="${application.status eq 'APPROVED'}">
+                                    <span class="text-success fw-semibold">Đã được HR phê duyệt</span>
+                                </c:when>
+                                <c:when test="${application.status eq 'REJECTED'}">
+                                    <span class="text-danger fw-semibold">Bị từ chối</span>
+                                    <c:if test="${not empty application.rejectReason}">
+                                        <div class="text-danger small mt-1">Lý do: <c:out value="${application.rejectReason}" /></div>
+                                    </c:if>
+                                </c:when>
+                                <c:otherwise>
+                                    <c:out value="${application.status}" />
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                    </div>
+                    <a href="${ctx}/intern/applications" class="btn btn-outline-brand btn-sm">
+                        <i class="bi bi-eye me-1"></i>Xem danh sách đơn
+                    </a>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <p class="mb-1 text-muted small">
+                            Sau khi tải lên CV, bạn hãy nộp đơn ứng tuyển chính thức để chuyển hồ sơ sang mục <strong>Duyệt hồ sơ</strong> cho HR xét duyệt.
+                        </p>
+                    </div>
+                    <c:if test="${not empty profile and not empty profile.profileId and profile.profileId > 0}">
+                        <form action="${ctx}/intern/applications" method="post" class="m-0">
+                            <input type="hidden" name="csrfToken" value="${csrfToken}">
+                            <button type="submit" class="btn btn-brand btn-sm">
+                                <i class="bi bi-send me-1"></i>Nộp đơn ứng tuyển
+                            </button>
+                        </form>
+                    </c:if>
+                </div>
+            </c:otherwise>
         </c:choose>
     </div>
 </div>

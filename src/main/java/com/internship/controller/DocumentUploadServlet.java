@@ -131,6 +131,20 @@ public class DocumentUploadServlet extends HttpServlet {
 
         documentService.saveDocument(profile.getProfileId(), docType, filePart, uploadDir);
 
+        // Tự động kết nối với BE3: Khi TTS tải lên CV, nếu chưa có Application thì tự động khởi tạo đơn PENDING
+        // để HR có thể thấy và xét duyệt ngay tại danh sách /hr/applications
+        if ("CV".equalsIgnoreCase(docType)) {
+            try {
+                com.internship.dao.ApplicationDAO appDAO = new com.internship.dao.ApplicationDAO();
+                List<com.internship.model.Application> apps = appDAO.getApplicationsByInternId(profile.getProfileId());
+                if (apps == null || apps.isEmpty()) {
+                    appDAO.createApplication(profile.getProfileId());
+                }
+            } catch (Exception e) {
+                log("Không thể tự động khởi tạo đơn ứng tuyển sau khi tải CV", e);
+            }
+        }
+
         request.getSession().setAttribute("flashSuccess", "Tải lên " + docType + " thành công!");
         response.sendRedirect(request.getContextPath() + "/intern/profile");
     }

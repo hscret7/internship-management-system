@@ -146,13 +146,30 @@ public class InternProfileServlet extends HttpServlet {
         }
         InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
         List<Document> documents = null;
+        com.internship.model.Application application = null;
 
         if (profile != null) {
             documents = documentService.getDocumentsByProfileId(profile.getProfileId());
+            try {
+                com.internship.dao.ApplicationDAO appDAO = new com.internship.dao.ApplicationDAO();
+                List<com.internship.model.Application> apps = appDAO.getApplicationsByInternId(profile.getProfileId());
+                if (apps != null && !apps.isEmpty()) {
+                    application = apps.get(0);
+                }
+            } catch (Exception ignored) {}
+        } else {
+            // TTS mới đăng ký chưa có hồ sơ: tự động khởi tạo dữ liệu mặc định từ currentUser
+            // để không bắt TTS gõ lại Họ tên và Email khi đăng nhập lần đầu
+            profile = new InternProfile();
+            profile.setUserId(currentUser.getUserId());
+            profile.setFullName(currentUser.getFullName());
+            profile.setEmail(currentUser.getEmail());
+            profile.setStatus("ACTIVE");
         }
 
         request.setAttribute("profile", profile);
         request.setAttribute("documents", documents);
+        request.setAttribute("application", application);
         request.getRequestDispatcher("/intern/profile.jsp").forward(request, response);
     }
 
@@ -359,7 +376,7 @@ public class InternProfileServlet extends HttpServlet {
 
         try {
             InternProfile ownProfile = profileService.getProfileByUserId(currentUser.getUserId());
-            if (profileIdStr != null && !profileIdStr.trim().isEmpty()) {
+            if (profileIdStr != null && !profileIdStr.trim().isEmpty() && !"0".equals(profileIdStr.trim())) {
                 int profileId = Integer.parseInt(profileIdStr.trim());
                 if (ownProfile == null || ownProfile.getProfileId() != profileId) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa hồ sơ của người khác.");
@@ -382,6 +399,12 @@ public class InternProfileServlet extends HttpServlet {
         } catch (IllegalArgumentException | IllegalAccessException e) {
             request.setAttribute("errorMessage", e.getMessage());
             request.setAttribute("profile", profile);
+            try {
+                InternProfile ownProfile = profileService.getProfileByUserId(currentUser.getUserId());
+                if (ownProfile != null) {
+                    request.setAttribute("documents", documentService.getDocumentsByProfileId(ownProfile.getProfileId()));
+                }
+            } catch (Exception ignored) {}
             request.getRequestDispatcher("/intern/profile.jsp").forward(request, response);
         }
     }

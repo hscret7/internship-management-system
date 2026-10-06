@@ -12,7 +12,7 @@
 <div class="card">
     <div class="card-header">
         <span>Thông tin cá nhân</span>
-        <c:if test="${not empty profile}">
+        <c:if test="${not empty profile and profile.profileId > 0}">
             <span class="badge-status ${profile.status eq 'ACTIVE' ? 'badge-status--ok' : 'badge-status--neutral'}">
                 <c:out value="${profile.status}" />
             </span>
@@ -23,12 +23,21 @@
         <div class="card-body">
 
             <input type="hidden" name="csrfToken" value="${csrfToken}">
-            <input type="hidden" name="profileId" value="${profile.profileId}">
+            <input type="hidden" name="profileId" value="${not empty profile.profileId and profile.profileId gt 0 ? profile.profileId : ''}">
+
+            <c:if test="${empty profile or empty profile.profileId or profile.profileId == 0}">
+                <div class="alert alert-info d-flex align-items-center mb-3 py-2 px-3" role="alert">
+                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                    <div>
+                        Chào mừng <strong><c:out value="${not empty profile.fullName ? profile.fullName : currentUser.fullName}" /></strong>! Thông tin tài khoản của bạn đã được điền sẵn. Vui lòng bổ sung Số điện thoại, Trường học và Chuyên ngành để hoàn tất hồ sơ thực tập sinh.
+                    </div>
+                </div>
+            </c:if>
 
             <div class="mb-3">
                 <label class="form-label" for="fullName">Họ và tên <span class="req">*</span></label>
                 <input type="text" id="fullName" name="fullName" class="form-control"
-                       value="${profile.fullName}" required maxlength="100"
+                       value="${not empty profile.fullName ? profile.fullName : currentUser.fullName}" required maxlength="100"
                        placeholder="Nguyễn Văn Nam">
             </div>
 
@@ -58,7 +67,7 @@
                 <div class="col-md-6">
                     <label class="form-label" for="email">Email liên hệ <span class="req">*</span></label>
                     <input type="email" id="email" name="email" class="form-control"
-                           value="${profile.email}" required placeholder="nam@student.edu.vn">
+                           value="${not empty profile.email ? profile.email : currentUser.email}" required placeholder="nam@student.edu.vn">
                 </div>
             </div>
 
@@ -95,7 +104,7 @@
         <div class="card-footer d-flex justify-content-between align-items-center">
             <span class="form-text"><span class="req">*</span> là thông tin bắt buộc.</span>
             <button type="submit" class="btn btn-brand">
-                <i class="bi bi-save me-1"></i>${empty profile ? 'Tạo hồ sơ' : 'Cập nhật hồ sơ'}
+                <i class="bi bi-save me-1"></i>${empty profile or empty profile.profileId or profile.profileId == 0 ? 'Tạo hồ sơ' : 'Cập nhật hồ sơ'}
             </button>
         </div>
     </form>
