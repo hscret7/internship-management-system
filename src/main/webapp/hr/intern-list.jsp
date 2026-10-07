@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html; charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="pageTitle" value="Quản lý Thực Tập Sinh" />
 <c:set var="activePage" value="interns" />
@@ -89,7 +89,7 @@
                                         <td>
                                             <c:choose>
                                               <c:when test="${p.status == 'ACTIVE'}">
-                                                  <span class="badge bg-success">Đang thực tập</span>
+                                                  <span class="badge bg-success">Hoạt động</span>
                                               </c:when>
                                               <c:otherwise>
                                                   <span class="badge bg-secondary"><c:out value="${p.status}" /></span>

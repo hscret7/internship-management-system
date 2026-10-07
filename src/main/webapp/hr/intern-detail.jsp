@@ -32,7 +32,7 @@
                     <div class="mb-3">
                         <c:choose>
                             <c:when test="${profile.status == 'ACTIVE'}">
-                                <span class="badge bg-success">Đang thực tập</span>
+                                <span class="badge bg-success">Hoạt động</span>
                             </c:when>
                             <c:otherwise>
                                 <span class="badge bg-secondary"><c:out value="${profile.status}" /></span>
