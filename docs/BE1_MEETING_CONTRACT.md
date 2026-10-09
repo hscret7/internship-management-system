@@ -1,6 +1,6 @@
 # BE1 US35 Task 35.1 — meeting data source
 
-Status: draft backend with HTTP API; not complete US35. Base develop 3e3b043.
+Status: backend integrated into develop through PR #53 and #54 (2026-10-08). FE/BE3 acceptance remains pending; full US35 is not complete.
 
 The authoritative meeting source is the new `meetings` and `meeting_participants` tables. Apply `sql/schema_be1_meetings.sql` manually after core/BE2/BE3 schema, initially on an isolated test DB. Existing program/enrollment/mentor tables are read and locked for authorization, never modified by this module. No runtime DDL, seed data, email sends or UI changes.
 
@@ -10,7 +10,7 @@ The authoritative meeting source is the new `meetings` and `meeting_participants
 
 Actor IDs must come from authenticated server sessions, never a request field. Service re-reads ACTIVE role from DB. ADMIN/HR may manage meetings. MENTOR may create only for currently assigned ACTIVE mentees; only the organizing Mentor may update/cancel, and must still have current assignments for every existing and proposed participant. After reassignment or inactive enrollment, HR/Admin manage existing meeting cleanup. INTERN cannot write. Authority is checked in the same transaction as writes; DAO does not commit.
 
-Both meeting data and participants commit/rollback together. Dedicated connection sets SESSION timezone UTC; JDBC date reads/binds use UTC Calendar. Foreign keys use existing signed INT program/enrollment and signed BIGINT user IDs. No cascading deletion. Participant changes replace current links; there is not yet a versioned attendee history.
+Both meeting data and participants commit/rollback together. Dedicated connection sets SESSION timezone UTC; JDBC date reads/binds use UTC Calendar. Foreign keys use existing signed INT program/enrollment and signed BIGINT user IDs. No cascading deletion. Participant changes replace current links; Task 35.2 now preserves per-revision delivery recipient snapshots; these are not a general enrollment/assignment audit history.
 
 ## HTTP contract (BE1, for FE integration)
 GET `{contextPath}/meetings`: `programId` optional positive INT, `status` optional SCHEDULED/CANCELLED, `page` default1 (1..1000000), `size` default20 (1..100). Returns `{items:[...],page,size,csrfToken}`; no total-count field. Ascending startsAt then ID. Filters applied before pagination; concurrent scope changes can shorten a page. GET with `id` returns `{item:{...},csrfToken}`. Details contain id,programId,organizerUserId,title,description,location,startsAt,endsAt,status,revision,enrollmentIds. Intern gets an empty enrollmentIds array to avoid exposing other participants' enrollment identifiers.
@@ -23,6 +23,17 @@ WSL build, opt-in local MySQL DAO test and core Tomcat role/CSRF smoke evidence 
 
 Existing-meeting writes check Mentor ownership/current scope before revision and cancelled-state errors. Authorized stale writes return409; unauthorized Mentor writes return403. Basic request parsing/validation can still return400 before service authorization. Mentor SQL list visibility uses the same active Intern user/role, enrollment/program and current assignment conditions as detail reads; concurrent changes can still shorten pages.
 
-Task 35.2 must add transactional outbox/versioned delivery snapshots before sending mail: CREATE/CHANGE/CANCEL/reminder events, recipients including removed participants, retry schedule/claim locking and dedup by meeting/revision/event/recipient. Never perform SMTP while holding the scheduling transaction. Existing EmailService.sendEmail is reusable; no external messages sent in Task 35.1. Email exactly-once delivery must not be promised when SMTP acknowledgment is uncertain.
+Task 35.2 has added transactional outbox/versioned delivery snapshots for: CREATE/CHANGE/CANCEL/reminder events, recipients including removed participants, retry schedule/claim locking and dedup by meeting/revision/event/recipient. Never perform SMTP while holding the scheduling transaction. Existing EmailService.sendEmail is reusable; no external messages sent in Task 35.1. Email exactly-once delivery must not be promised when SMTP acknowledgment is uncertain.
 
-Open integration decisions: HR scope is currently all programs (existing project role policy); reminders and allowed lead time require a documented setting. Delivery recipient address (users.email vs profile contact email) must be explicitly selected in Task 35.2. Existing enrollment/mentor lifecycle owners retain their modules. Task 35.1 remains In Progress until migration and JDBC behavior are tested against MySQL, new API passes runtime role/CSRF checks and FE/BE3 integration contract is reviewed.
+Open integration decisions: HR scope is currently all programs (existing project role policy); Reminder lead is configured by meeting.notifications.reminder.minutes (1..10080). Delivery uses users.email; reminders default to 30 minutes and are configurable in the notification runbook. Existing enrollment/mentor lifecycle owners retain their modules. Task 35.1 remains In Progress until migration and JDBC behavior are tested against MySQL, new API passes runtime role/CSRF checks and FE/BE3 integration contract is reviewed.
+
+
+## Bằng chứng cập nhật — 2026-10-09
+- PR #53 merge commit 016f6f4; PR #54 merge commit 376adfe. Người dùng đã phê duyệt từng merge.
+- WSL develop 376adfe: mvn clean package PASS, 266 tests / 240 pass / 26 skipped / 0 failures/errors. Skipped gồm 1 BE1 DAO JDBC, 2 BE3 MySQL, 11 BE4 MySQL, 12 notification JDBC do thiếu opt-in properties.
+- Chạy riêng script disposable MySQL 8.0.46 tại 376adfe: 54/54 PASS, 0 skipped, gồm 12 notification JDBC. Không coi 13 integration tests BE3/BE4 là đã pass.
+- Tomcat test 18082 dùng WAR ce3f003 đã build trước merge: default-disabled login/read; enqueue-only create/update/cancel/repeated cancel đều đạt. Snapshot giữ email người bị loại, CHANGE gửi union người cũ/mới; reminder cũ SUPERSEDED.
+- SMTP loopback Mailpit: CREATE/CHANGE/CANCEL được capture; cuộc họp 2 CREATE/REMINDER SENT attempts=1. Pause Mailpit khi tạo cuộc họp 3: CREATE PENDING attempts=2 EMAIL_FAILURE; unpause -> SENT attempts=3, lỗi xóa. Reminder cuộc họp 3 đến hạn -> SENT attempts=1.
+- DB cuối: 8 SENT, 2 SUPERSEDED. SMTP runtime này là ce3f003, không phải triển khai lại WAR post-merge; không có thử internet/TLS/auth/load.
+- Người dùng lưu SQL, outbox, Mailpit message listing, Surefire (54-test run), commit và log trong thư mục bằng chứng local rồi dừng đúng Tomcat test và hai container có label. Cổng 18082/18025/11025/13318 không còn listener. Không redeploy Tomcat 8082 hoặc migrate DB chung.
+- Chi tiết bằng chứng: https://github.com/hscret7/internship-management-system/pull/53 và https://github.com/hscret7/internship-management-system/pull/54.
