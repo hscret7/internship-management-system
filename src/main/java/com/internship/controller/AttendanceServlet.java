@@ -64,6 +64,9 @@ public class AttendanceServlet extends HttpServlet {
                 
                 List<AttendanceReportRow> report = attendanceService.getReport(currentUser, enrollmentId > 0 ? enrollmentId : null, null, from, to);
                 req.setAttribute("report", report);
+                req.setAttribute("from", from);
+                req.setAttribute("to", to);
+                req.setAttribute("enrollmentId", enrollmentId > 0 ? enrollmentId : null);
                 req.getRequestDispatcher("/WEB-INF/views/intern/attendance.jsp").forward(req, resp);
                 
             } else if ("/hr/attendance".equals(path)) {
@@ -83,6 +86,11 @@ public class AttendanceServlet extends HttpServlet {
                 try {
                     programId = (progParam != null && !progParam.trim().isEmpty()) ? Integer.parseInt(progParam) : null;
                 } catch (NumberFormatException e) { }
+
+                String status = req.getParameter("status");
+                if (status != null && status.trim().isEmpty()) {
+                    status = null;
+                }
                 
                 LocalDate from = LocalDate.now().minusDays(30);
                 LocalDate to = LocalDate.now();
@@ -95,11 +103,34 @@ public class AttendanceServlet extends HttpServlet {
                     }
                 } catch (Exception e) { }
                 
-                List<AttendanceReportRow> report = attendanceService.getReport(currentUser, enrollmentId, programId, from, to);
+                List<AttendanceReportRow> report = attendanceService.getReport(currentUser, enrollmentId, programId, from, to, status);
+
+                boolean isJson = "json".equalsIgnoreCase(req.getParameter("format")) ||
+                                 (req.getHeader("Accept") != null && req.getHeader("Accept").contains("application/json"));
+                if (isJson) {
+                    resp.setContentType("application/json;charset=UTF-8");
+                    resp.getWriter().write(toJson(report));
+                    return;
+                }
+
                 req.setAttribute("report", report);
+                req.setAttribute("attendanceJson", toJson(report));
+                req.setAttribute("from", from);
+                req.setAttribute("to", to);
+                req.setAttribute("enrollmentId", enrollmentId);
+                req.setAttribute("programId", programId);
+                req.setAttribute("status", status);
                 req.getRequestDispatcher("/WEB-INF/views/hr/attendance.jsp").forward(req, resp);
             }
         } catch (SQLException | IllegalArgumentException e) {
+            boolean isJson = "json".equalsIgnoreCase(req.getParameter("format")) ||
+                             (req.getHeader("Accept") != null && req.getHeader("Accept").contains("application/json"));
+            if (isJson) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.setContentType("application/json;charset=UTF-8");
+                resp.getWriter().write("{\"error\":" + jsonEscape(e.getMessage()) + "}");
+                return;
+            }
             req.setAttribute("error", e.getMessage());
             req.getRequestDispatcher("/error/500.jsp").forward(req, resp);
         }
@@ -144,5 +175,58 @@ public class AttendanceServlet extends HttpServlet {
                 resp.sendRedirect(req.getContextPath() + "/intern/attendance?enrollmentId=" + enrollmentId + "&error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
             }
         }
+    }
+
+    private static String toJson(List<AttendanceReportRow> list) {
+        if (list == null || list.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (AttendanceReportRow r : list) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append("{");
+            sb.append("\"enrollmentId\":").append(r.getEnrollmentId()).append(",");
+            sb.append("\"internName\":").append(jsonEscape(r.getInternName())).append(",");
+            sb.append("\"programName\":").append(jsonEscape(r.getProgramName())).append(",");
+            sb.append("\"workDate\":").append(jsonEscape(r.getWorkDate() != null ? r.getWorkDate().toString() : null)).append(",");
+            sb.append("\"startTime\":").append(jsonEscape(r.getStartTime() != null ? r.getStartTime().toString() : null)).append(",");
+            sb.append("\"endTime\":").append(jsonEscape(r.getEndTime() != null ? r.getEndTime().toString() : null)).append(",");
+            sb.append("\"checkInTime\":").append(jsonEscape(r.getCheckInTime() != null ? r.getCheckInTime().toString() : null)).append(",");
+            sb.append("\"checkOutTime\":").append(jsonEscape(r.getCheckOutTime() != null ? r.getCheckOutTime().toString() : null)).append(",");
+            sb.append("\"approvedLeave\":").append(r.isApprovedLeave()).append(",");
+            sb.append("\"status\":").append(jsonEscape(r.getStatus())).append(",");
+            sb.append("\"workedHours\":").append(r.getWorkedHours());
+            sb.append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String jsonEscape(String s) {
+        if (s == null) return "null";
+        StringBuilder sb = new StringBuilder("\"");
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        sb.append("\"");
+        return sb.toString();
     }
 }

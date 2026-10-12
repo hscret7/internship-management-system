@@ -69,6 +69,7 @@ public class AllowanceDAO {
                     if (paid != null) a.setPaidAt(paid.toLocalDateTime());
                     a.setCreatedBy(rs.getLong("created_by"));
                     a.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    a.setInternName(rs.getString("intern_name"));
                     result.add(a);
                 }
             }

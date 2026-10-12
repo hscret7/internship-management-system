@@ -14,6 +14,7 @@ public class Allowance {
     private long createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String internName;
 
     public Allowance() {
     }
@@ -60,4 +61,7 @@ public class Allowance {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getInternName() { return internName; }
+    public void setInternName(String internName) { this.internName = internName; }
 }
