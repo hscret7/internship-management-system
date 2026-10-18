@@ -1,7 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="pageTitle" value="Lịch họp mentor" />
-<c:set var="activePage" value="mentor-dashboard" />
+<c:set var="activePage" value="mentor-meetings" />
 <c:set var="pageStylesheet" value="fe3.css" />
 <c:set var="pageScript" value="fe3-sprint3.js" />
 <%@ include file="/WEB-INF/views/common/header.jsp" %>

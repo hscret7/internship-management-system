@@ -273,6 +273,11 @@
                 <i class="bi bi-list-check"></i><span>Giao nhiệm vụ</span>
             </a>
 
+            <a class="app-nav__link ${activePage eq 'mentor-meetings' ? 'is-active' : ''}"
+               href="${ctx}/mentor/meetings">
+                <i class="bi bi-camera-video"></i><span>Lịch họp</span>
+            </a>
+
             <div class="app-nav__group">Theo dõi</div>
 
             <a class="app-nav__link ${activePage eq 'mentor-reports' ? 'is-active' : ''}"
