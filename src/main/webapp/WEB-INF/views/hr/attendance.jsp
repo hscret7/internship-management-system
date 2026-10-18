@@ -23,6 +23,22 @@
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
 
 <div class="container-fluid py-4">
+    <section class="card card-body mb-3" data-attendance-tools data-context="${ctx}"
+             data-form="attendanceFilter" data-enrollment="fEnrollment" data-program="fProgram" aria-label="Tra cứu ghi danh và xuất báo cáo">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5"><label class="form-label" for="reportLookupEmail">Email thực tập sinh</label>
+                <input id="reportLookupEmail" data-lookup-email class="form-control" type="email" maxlength="254" placeholder="Nhập email đầy đủ" autocomplete="off"></div>
+            <div class="col-md-2"><button type="button" data-lookup-button class="btn btn-outline-primary">Tra cứu</button></div>
+            <div class="col-md-5"><label class="form-label" for="reportLookupChoices">Ghi danh phù hợp</label>
+                <select id="reportLookupChoices" data-lookup-choices class="form-select" disabled><option value="">Chọn ghi danh sau khi tra cứu</option></select></div>
+        </div>
+        <p class="form-text">Một email có thể có nhiều ghi danh. Chọn đúng chương trình để điền mã vào bộ lọc; có thể nhập mã trực tiếp.</p>
+        <div class="d-flex flex-wrap gap-2"><button type="button" data-attendance-export="xlsx" class="btn btn-outline-primary">Xuất Excel</button>
+            <button type="button" data-attendance-export="pdf" class="btn btn-outline-primary">Xuất PDF</button></div>
+        <p class="form-text mb-0">Xuất theo bộ lọc đang nhập, tối đa 366 ngày tính cả hai đầu. File gồm mọi trạng thái và một dòng cho mỗi ca làm. PDF cần cấu hình font tiếng Việt trên máy chủ.</p>
+        <div data-report-message role="status" aria-live="polite" hidden></div>
+    </section>
+
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <h2 class="mb-0"><i class="bi bi-clock-history me-2"></i> Báo cáo chấm công (US22)</h2>
@@ -208,4 +224,5 @@
     })();
 </script>
 
+<script src="${ctx}/assets/js/attendance-report-tools.js" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

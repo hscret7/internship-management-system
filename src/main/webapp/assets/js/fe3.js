@@ -319,11 +319,30 @@
         });
     }
 
+    function assessmentCard(result, index) {
+        var panel = node('article', null, 'fe3-feedback border rounded p-3 mb-3');
+        var heading = node('div', null, 'd-flex flex-wrap justify-content-between gap-2 mb-2');
+        heading.appendChild(node('strong', 'Mentor: ' + (result.mentorName || '—')));
+        heading.appendChild(node('span', (index === 0 ? 'Mới nhất · ' : '') + moment(result.createdAt), 'text-muted'));
+        panel.appendChild(heading);
+        var scores = node('div', null, 'row g-2 mb-3');
+        [['Kỹ năng', result.skillsScore], ['Thái độ', result.attitudeScore]].forEach(function (criterion) {
+            var box = node('div', null, 'col-sm-6');
+            var detail = node('div', null, 'border rounded p-2');
+            detail.appendChild(node('span', criterion[0], 'd-block text-muted'));
+            detail.appendChild(node('strong', criterion[1] + ' / 5', 'fs-5'));
+            box.appendChild(detail); scores.appendChild(box);
+        });
+        panel.appendChild(scores);
+        panel.appendChild(node('p', result.comment || 'Không có nhận xét.', 'fe3-report-content mb-0'));
+        return panel;
+    }
+
     function showEvaluation(result, target) {
         target.replaceChildren();
-        if (!result) { target.appendChild(node('p', 'Chưa có đánh giá cuối kỳ.')); return; }
-        target.appendChild(node('h2', 'Kết quả: ' + result.score + '/100'));
-        target.appendChild(node('p', 'Ngày đánh giá: ' + moment(result.createdAt)));
+        if (!result) { target.appendChild(node('p', 'Chưa có đánh giá thang 100.')); return; }
+        target.appendChild(node('h2', 'Kết quả: ' + result.score + '/100', 'h5'));
+        target.appendChild(node('p', 'Ngày đánh giá: ' + moment(result.createdAt), 'text-muted'));
         target.appendChild(node('p', result.comment || 'Không có nhận xét.', 'fe3-report-content'));
     }
 
@@ -334,14 +353,15 @@
             if (form) form.classList.add('d-none');
             var target = byId('evaluationResult');
             if (!entry) { target.textContent = 'Chưa có đợt thực tập.'; return; }
+            target.replaceChildren(node('p', 'Đang tải đánh giá…'));
             var results = await Promise.all([api('/assessments', { enrollmentId: entry.enrollmentId }), api('/evaluation', { enrollmentId: entry.enrollmentId })]);
-            target.replaceChildren(node('h2', 'Lịch sử đánh giá', 'h5'));
+            if (!currentEnrollment() || currentEnrollment().enrollmentId !== entry.enrollmentId) return;
+            target.replaceChildren(node('h2', 'Lịch sử đánh giá hai tiêu chí', 'h5'));
+            target.appendChild(node('p', 'Kỹ năng và thái độ được lưu riêng trên thang 1–5; không tự quy đổi điểm, xếp loại hoặc xác nhận hoàn thành.', 'text-muted'));
+            target.appendChild(node('p', results[0].length + ' bản ghi đánh giá', 'fw-semibold'));
             if (!results[0].length) target.appendChild(node('p', 'Chưa có đánh giá hai tiêu chí.'));
             results[0].forEach(function (result, index) {
-                var panel = node('article', null, 'fe3-feedback');
-                panel.appendChild(node('strong', (index === 0 ? 'Mới nhất · ' : '') + result.mentorName + ' · ' + moment(result.createdAt)));
-                panel.appendChild(node('p', 'Kỹ năng: ' + result.skillsScore + '/5 · Thái độ: ' + result.attitudeScore + '/5'));
-                panel.appendChild(node('p', result.comment, 'fe3-report-content')); target.appendChild(panel);
+                target.appendChild(assessmentCard(result, index));
             });
             if (results[1]) { var legacy=node('section', null, 'fe3-feedback'); legacy.appendChild(node('h3', 'Đánh giá cũ (thang 100, không quy đổi)', 'h6'));var body=node('div');showEvaluation(results[1], body);legacy.appendChild(body);target.appendChild(legacy); }
             if (form && entry.status === 'ACTIVE') form.classList.remove('d-none');
@@ -607,7 +627,7 @@
             var term = search.value.trim().toLocaleLowerCase('vi');
             var filtered = entries.filter(function (entry) {
                 return !term || [entry.enrollmentId, entry.internName, entry.programName,
-                    entry.mentorName].some(function (part) {
+                    entry.mentorName, entry.comment].some(function (part) {
                     return String(part || '').toLocaleLowerCase('vi').includes(term);
                 });
             });

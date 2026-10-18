@@ -18,15 +18,15 @@
     </div>
     <div id="fe3Notice" class="alert d-none" role="status" aria-live="polite"></div>
     <div class="fe3-metrics fe3-metrics--compact" aria-label="Tổng hợp đánh giá">
-        <div class="fe3-metric"><span><i class="bi bi-file-earmark-check"></i> Tổng đánh giá</span><strong id="metricEvaluationCount">—</strong></div>
+        <div class="fe3-metric"><span><i class="bi bi-file-earmark-check"></i> Tổng đánh giá thang 100</span><strong id="metricEvaluationCount">—</strong></div>
         <div class="fe3-metric"><span><i class="bi bi-people"></i> TTS đã đánh giá</span><strong id="metricEvaluatedInterns">—</strong></div>
-        <div class="fe3-metric"><span><i class="bi bi-graph-up-arrow"></i> Điểm trung bình</span><strong id="metricAverageScore">—</strong></div>
+        <div class="fe3-metric"><span><i class="bi bi-graph-up-arrow"></i> Điểm trung bình / 100</span><strong id="metricAverageScore">—</strong></div>
     </div>
     <div class="fe3-panel">
         <div class="fe3-panel__heading">
             <div>
                 <span class="fe3-section-label">DANH SÁCH</span>
-                <h2>Đánh giá cuối kỳ</h2>
+                <h2>Đánh giá cũ — thang 100</h2>
             </div>
             <div class="fe3-search">
                 <i class="bi bi-search" aria-hidden="true"></i>
@@ -37,7 +37,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
-                <thead><tr><th>Thực tập sinh</th><th>Chương trình</th><th>Mentor</th><th>Điểm</th><th>Ngày đánh giá</th><th>Nhận xét</th></tr></thead>
+                <thead><tr><th>Thực tập sinh</th><th>Chương trình</th><th>Mentor</th><th>Điểm / 100</th><th>Ngày đánh giá</th><th>Nhận xét</th></tr></thead>
                 <tbody id="evaluationRows"><tr><td colspan="6">Đang tải kết quả…</td></tr></tbody>
             </table>
         </div>
