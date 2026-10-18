@@ -133,7 +133,15 @@ class Be2ServletTest {
         requestParameters.put("to", "2026-10-12");
 
         StubAttendanceService stubService = new StubAttendanceService();
-        AttendanceServlet servlet = new AttendanceServlet(stubService);
+        AttendanceServlet servlet = new AttendanceServlet(stubService,
+                new com.internship.service.EnrollmentLookupService() {
+                    @Override public List<com.internship.dao.ScheduleEnrollmentDAO.Choice> lookup(User actor, String email) {
+                        assertEquals(2L, actor.getUserId());
+                        assertNull(email);
+                        return List.of(new com.internship.dao.ScheduleEnrollmentDAO.Choice(
+                                15, 1, "Program", "ACTIVE", "ACTIVE", "Intern", "intern@example.com"));
+                    }
+                });
         servlet.doGet(requestProxy, responseProxy);
 
         assertEquals(200, responseStatus);

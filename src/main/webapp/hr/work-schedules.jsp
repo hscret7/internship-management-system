@@ -7,14 +7,15 @@
 .hr-schedule .panel{border:0;border-radius:1rem;box-shadow:0 .35rem 1.2rem #172b4d12}.hr-schedule .state{min-height:3rem}.hr-schedule .table td{vertical-align:middle}.hr-schedule .help{font-size:.875rem;color:#667085}
 </style>
 <div class="container-fluid py-4 hr-schedule" id="scheduleApp" data-api="${pageContext.request.contextPath}/api/hr/work-schedules">
- <div class="mb-4"><h2 class="h4 mb-1">Lịch làm việc</h2><p class="text-muted mb-0">Thiết lập ca theo mã ghi danh, theo dõi lịch và xung đột.</p></div>
+ <div class="mb-4"><h2 class="h4 mb-1">Lịch làm việc</h2><p class="text-muted mb-0">Tìm thực tập sinh bằng email, chọn chương trình và thiết lập ca.</p></div>
  <div id="scheduleAlert" class="state" role="status" aria-live="polite"></div>
  <div class="row g-4">
   <div class="col-xl-4"><section class="card panel"><div class="card-body p-4">
    <h3 class="h5 mb-3">Thiết lập ca làm</h3>
    <form id="scheduleForm" novalidate>
     <input type="hidden" id="csrfToken">
-    <div class="mb-3"><label class="form-label" for="enrollmentId">Mã ghi danh thực tập sinh *</label><input class="form-control" id="enrollmentId" type="number" min="1" step="1" required><div class="invalid-feedback">Nhập mã ghi danh hợp lệ.</div><div class="help mt-1">API sử dụng enrollmentId, không dùng mentor assignment.</div></div>
+    <div class="mb-3"><label class="form-label" for="enrollmentEmail">Email thực tập sinh *</label><div class="input-group"><input class="form-control" id="enrollmentEmail" type="email" maxlength="254" placeholder="Nhập email đầy đủ"><button type="button" id="lookupEnrollment" class="btn btn-outline-primary">Tìm ghi danh</button></div></div>
+    <div class="mb-3"><label class="form-label" for="enrollmentId">Chương trình ghi danh *</label><select class="form-select" id="enrollmentId" required><option value="">Tìm bằng email rồi chọn ghi danh</option></select><div class="help mt-1">Nếu có nhiều chương trình, chọn đúng ghi danh trước khi lưu ca.</div><button type="button" id="addBulkEnrollment" class="btn btn-sm btn-outline-secondary mt-2">Thêm ghi danh đã chọn vào nhóm</button></div>
     <div class="mb-3"><label class="form-label" for="workDate">Ngày làm việc *</label><input class="form-control" id="workDate" type="date" required><div class="invalid-feedback">Chọn ngày làm việc.</div></div>
     <div class="row g-3 mb-3"><div class="col-6"><label class="form-label" for="startTime">Bắt đầu *</label><input class="form-control" id="startTime" type="time" required><div class="invalid-feedback">Chọn giờ bắt đầu.</div></div><div class="col-6"><label class="form-label" for="endTime">Kết thúc *</label><input class="form-control" id="endTime" type="time" required><div class="invalid-feedback">Giờ kết thúc phải sau giờ bắt đầu.</div></div></div>
     <div class="mb-3"><label class="form-label" for="note">Ghi chú</label><textarea class="form-control" id="note" rows="2" maxlength="500"></textarea><div class="form-text">Tối đa 500 ký tự; không hỗ trợ ca qua đêm.</div></div>
@@ -28,5 +29,5 @@
   </div></section></div>
  </div>
 </div>
-<script src="${pageContext.request.contextPath}/assets/js/work-schedules.js?v=20261013-integration" defer></script>
+<script src="${pageContext.request.contextPath}/assets/js/work-schedules.js?v=20261018-email-lookup" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

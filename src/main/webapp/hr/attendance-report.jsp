@@ -25,11 +25,27 @@
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
 
 <div class="container-fluid py-4">
+    <section class="card card-body mb-3" data-attendance-tools data-context="${ctx}"
+             data-form="f" data-enrollment="fEnroll" data-program="fProgram" aria-label="Tra cứu ghi danh và xuất báo cáo">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5"><label class="form-label" for="reportLookupEmail">Email thực tập sinh</label>
+                <input id="reportLookupEmail" data-lookup-email class="form-control" type="email" maxlength="254" placeholder="Nhập email đầy đủ" autocomplete="off"></div>
+            <div class="col-md-2"><button type="button" data-lookup-button class="btn btn-outline-primary">Tra cứu</button></div>
+            <div class="col-md-5"><label class="form-label" for="reportLookupChoices">Ghi danh phù hợp</label>
+                <select id="reportLookupChoices" data-lookup-choices class="form-select" disabled><option value="">Chọn ghi danh sau khi tra cứu</option></select></div>
+        </div>
+        <p class="form-text">Một email có thể có nhiều ghi danh. Chọn đúng chương trình để điền mã vào bộ lọc; có thể nhập mã trực tiếp.</p>
+        <div class="d-flex flex-wrap gap-2"><button type="button" data-attendance-export="xlsx" class="btn btn-outline-primary">Xuất Excel</button>
+            <button type="button" data-attendance-export="pdf" class="btn btn-outline-primary">Xuất PDF</button></div>
+        <p class="form-text mb-0">Xuất theo bộ lọc đang nhập, tối đa 366 ngày tính cả hai đầu. File gồm mọi trạng thái và một dòng cho mỗi ca làm. PDF cần cấu hình font tiếng Việt trên máy chủ.</p>
+        <div data-report-message role="status" aria-live="polite" hidden></div>
+    </section>
+
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h2 class="h4 mb-1">Báo cáo chuyên cần</h2>
-            <p class="text-muted mb-0">Theo dõi đi làm, nghỉ phép, vắng và thiếu check-out.</p>
+            <p class="text-muted mb-0">Theo dõi đi làm, nghỉ phép, vắng và thiếu check-out. Mỗi dòng là một ca làm; không cộng giờ giữa các ca có cùng lần chấm công.</p>
         </div>
         <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/hr/attendance">
             Xem dạng bảng
@@ -85,6 +101,7 @@
                         <th>Ngày</th>
                         <th>Thực tập sinh</th>
                         <th>Chương trình</th>
+                        <th>Ca làm</th>
                         <th>Check-in</th>
                         <th>Check-out</th>
                         <th>Giờ làm</th>
@@ -124,7 +141,7 @@
             const shown = want ? loaded.filter((x) => x.status === want) : loaded;
 
             if (!shown.length) {
-                rows.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">'
+                rows.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5">'
                     + (loaded.length ? 'Không có dòng nào khớp bộ lọc trạng thái.'
                                      : 'Không có dữ liệu chấm công trong khoảng đã chọn.')
                     + '</td></tr>';
@@ -141,6 +158,7 @@
                     + '<td><b>' + esc(x.internName) + '</b>'
                         + '<div class="small text-muted">Ghi danh #' + esc(x.enrollmentId) + '</div></td>'
                     + '<td>' + esc(x.programName) + '</td>'
+                    + '<td>' + esc(x.startTime) + ' – ' + esc(x.endTime) + '</td>'
                     + '<td>' + esc(x.checkInTime) + '</td>'
                     + '<td>' + out + '</td>'
                     + '<td>' + Number(x.workedHours || 0).toFixed(2) + '</td>'
@@ -176,7 +194,8 @@
                 if (!res.ok) {
                     throw new Error(body && body.error ? body.error : ('Lỗi HTTP ' + res.status));
                 }
-                loaded = Array.isArray(body) ? body : [];
+                if (!Array.isArray(body)) throw new Error('Dữ liệu báo cáo trả về không hợp lệ.');
+                loaded = body;
                 err.classList.add('d-none');
                 paint();
             } catch (e) {
@@ -200,4 +219,5 @@
     })();
 </script>
 
+<script src="${ctx}/assets/js/attendance-report-tools.js" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

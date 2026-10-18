@@ -243,7 +243,7 @@
         var forms = document.querySelectorAll('form[data-check-password]');
 
         Array.prototype.forEach.call(forms, function (form) {
-            var pass = form.querySelector('input[name="password"]');
+            var pass = form.querySelector('input[name="password"], input[name="newPassword"]');
             var confirm = form.querySelector('input[name="confirmPassword"]');
 
             if (!pass || !confirm) {
@@ -277,6 +277,37 @@
         });
     }
 
+    // Separate button per field; never submits the form or changes its value.
+    function initPasswordVisibility() {
+        document.querySelectorAll('input[type="password"]').forEach(function (input, index) {
+            if (input.dataset.visibilityReady) return;
+            input.dataset.visibilityReady = 'true';
+            if (!input.id) input.id = 'password-field-' + index;
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-outline-secondary btn-sm mt-1';
+            button.setAttribute('aria-controls', input.id);
+            button.setAttribute('aria-pressed', 'false');
+            function render() {
+                var shown = input.type === 'text';
+                button.setAttribute('aria-pressed', String(shown));
+                button.setAttribute('aria-label', shown ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+                button.innerHTML = '<i class="bi ' + (shown ? 'bi-eye-slash' : 'bi-eye')
+                    + '" aria-hidden="true"></i> ' + (shown ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            }
+            button.addEventListener('click', function () {
+                input.type = input.type === 'password' ? 'text' : 'password';
+                render();
+            });
+            input.insertAdjacentElement('afterend', button);
+            render();
+            // Avoid leaving passwords exposed after a failed submission or browser history navigation.
+            function hide() { input.type = 'password'; render(); }
+            if (input.form) input.form.addEventListener('submit', hide);
+            window.addEventListener('pageshow', hide);
+        });
+    }
+
     /* ------------------------------------------------------------- Init -- */
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -287,5 +318,6 @@
         initFileInputs();
         initUploadForms();
         initPasswordMatch();
+        initPasswordVisibility();
     });
 })();

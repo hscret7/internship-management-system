@@ -159,6 +159,7 @@
                         Allowed. Bắt buộc phải là form POST như dưới đây.
                         Không thêm doGet vào LogoutServlet (file của BE1).
                     --%>
+                    <a href="${ctx}/auth/change-password" class="btn btn-outline-brand btn-sm">Đổi mật khẩu</a>
                     <form action="${ctx}/auth/logout" method="post" class="m-0">
                         <input type="hidden" name="csrfToken" value="<%= com.internship.util.CsrfToken.expose(request) %>">
                         <button type="submit" class="btn btn-outline-brand btn-sm">

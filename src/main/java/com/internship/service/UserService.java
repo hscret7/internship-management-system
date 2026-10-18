@@ -159,6 +159,35 @@ public class UserService {
         }
     }
 
+    /** Changes only the authenticated actor's password; never trust a submitted user ID. */
+    public void changePassword(long userId, String currentPassword, String newPassword,
+            String confirmPassword) throws SQLException {
+        if (userId <= 0 || currentPassword == null || currentPassword.isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập mật khẩu hiện tại.");
+        }
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 8 ký tự.");
+        }
+        if (newPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("Mật khẩu mới tối đa 72 byte UTF-8.");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp.");
+        }
+        User user = userDAO.findById(userId);
+        if (user == null || user.getStatus() != UserStatus.ACTIVE
+                || !PasswordUtil.verifyPassword(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không đúng hoặc tài khoản không khả dụng.");
+        }
+        if (PasswordUtil.verifyPassword(newPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Mật khẩu mới phải khác mật khẩu hiện tại.");
+        }
+        String newHash = PasswordUtil.hashPassword(newPassword);
+        if (!userDAO.changePasswordIfCurrent(userId, user.getPasswordHash(), newHash)) {
+            throw new IllegalArgumentException("Thông tin tài khoản đã thay đổi. Vui lòng đăng nhập lại và thử lại.");
+        }
+    }
+
     public User registerIntern(
             String username,
             String email,

@@ -22,8 +22,14 @@
         <form action="${pageContext.request.contextPath}/intern/attendance" method="post" class="d-flex align-items-end gap-3">
             <input type="hidden" name="csrfToken" value="<%= com.internship.util.CsrfToken.expose(request) %>">
             <div>
-                <label class="form-label">Mã Ghi Danh (Enrollment ID)</label>
-                <input type="number" name="enrollmentId" class="form-control" value="<c:out value='${enrollmentId}'/>" required>
+                <label class="form-label" for="attendanceEnrollment">Chương trình ghi danh</label>
+                <select id="attendanceEnrollment" name="enrollmentId" class="form-select" required>
+                    <option value="">Chọn chương trình để chấm công</option>
+                    <c:forEach var="choice" items="${enrollmentChoices}">
+                        <option value="${choice.enrollmentId}" ${choice.enrollmentId == enrollmentId ? 'selected' : ''}><c:out value="${choice.programName}"/> — <c:out value="${choice.enrollmentStatus}"/> (#${choice.enrollmentId})</option>
+                    </c:forEach>
+                </select>
+                <c:if test="${empty enrollmentChoices}"><div class="form-text">Bạn chưa có ghi danh. Liên hệ HR để được hỗ trợ.</div></c:if>
             </div>
             <button type="submit" name="action" value="checkin" class="btn btn-primary"><i class="bi bi-box-arrow-in-right"></i> Check-in</button>
             <button type="submit" name="action" value="checkout" class="btn btn-warning"><i class="bi bi-box-arrow-right"></i> Check-out</button>
@@ -37,7 +43,15 @@
     </div>
     <div class="card-body">
         <form action="${pageContext.request.contextPath}/intern/attendance" method="get" class="row g-3 mb-4">
-            <input type="hidden" name="enrollmentId" value="<c:out value='${enrollmentId}'/>">
+            <div class="col-md-12">
+                <label class="form-label" for="reportEnrollment">Chương trình ghi danh</label>
+                <select id="reportEnrollment" name="enrollmentId" class="form-select">
+                    <option value="">Tất cả ghi danh của tôi</option>
+                    <c:forEach var="choice" items="${enrollmentChoices}">
+                        <option value="${choice.enrollmentId}" ${choice.enrollmentId == enrollmentId ? 'selected' : ''}><c:out value="${choice.programName}"/> — <c:out value="${choice.enrollmentStatus}"/> (#${choice.enrollmentId})</option>
+                    </c:forEach>
+                </select>
+            </div>
             <div class="col-md-4">
                 <label class="form-label">Từ ngày</label>
                 <input type="date" name="from" class="form-control" value="<c:out value='${from}'/>">

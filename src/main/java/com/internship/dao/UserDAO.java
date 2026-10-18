@@ -17,6 +17,20 @@ import java.util.List;
 
 public class UserDAO {
 
+    /** Compare-and-set prevents overwriting a concurrent password change/reset. */
+    public boolean changePasswordIfCurrent(long userId, String expectedHash, String newHash)
+            throws SQLException {
+        String sql = "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP "
+                + "WHERE user_id = ? AND BINARY password_hash = BINARY ? AND status = 'ACTIVE'";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, newHash);
+            statement.setLong(2, userId);
+            statement.setString(3, expectedHash);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public User findById(long userId) throws SQLException {
         String sql = """
                 SELECT
