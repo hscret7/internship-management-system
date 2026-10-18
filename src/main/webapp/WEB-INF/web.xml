@@ -28,4 +28,16 @@
         <location>/WEB-INF/views/error/500.jsp</location>
     </error-page>
 
+    <!-- Default encoding for request bodies and text responses. -->
+    <request-character-encoding>UTF-8</request-character-encoding>
+    <response-character-encoding>UTF-8</response-character-encoding>
+
+    <!-- Default source encoding for JSP pages. -->
+    <jsp-config>
+        <jsp-property-group>
+            <url-pattern>*.jsp</url-pattern>
+            <page-encoding>UTF-8</page-encoding>
+        </jsp-property-group>
+    </jsp-config>
+
 </web-app>
