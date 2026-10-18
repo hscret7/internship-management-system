@@ -26,6 +26,39 @@
     .hr-support .request-content{white-space:pre-wrap;overflow-wrap:anywhere;max-width:25rem}
     .hr-support .table td{vertical-align:middle}
     @media(max-width:575.98px){.hr-support .table{min-width:980px}}
+
+    .support-response-dialog{
+        width:min(36rem,calc(100% - 2rem));
+        max-height:calc(100vh - 2rem);
+        overflow:auto;
+        padding:0;
+        border:0;
+        border-radius:1rem;
+        box-shadow:0 1rem 3rem #0004;
+    }
+    .support-response-dialog::backdrop{background:#0007}
+
+    .hr-support .support-status{
+        color:#334155;
+        background:#e2e8f0;
+        border:1px solid #94a3b8;
+        padding:.45rem .65rem;
+        font-size:.8rem;
+        font-weight:600;
+        white-space:nowrap;
+    }
+    .hr-support .support-status[data-status="PENDING"]{
+        color:#713f12;background:#fef3c7;border-color:#d97706;
+    }
+    .hr-support .support-status[data-status="IN_PROGRESS"]{
+        color:#1e3a8a;background:#dbeafe;border-color:#2563eb;
+    }
+    .hr-support .support-status[data-status="RESOLVED"]{
+        color:#14532d;background:#dcfce7;border-color:#16a34a;
+    }
+    .hr-support .support-status[data-status="REJECTED"]{
+        color:#7f1d1d;background:#fee2e2;border-color:#dc2626;
+    }
 </style>
 
 <div class="container-fluid py-4 hr-support">
@@ -67,13 +100,14 @@
 
             <div id="responseModals">
                 <c:forEach var="req" items="${requests}">
-                    <div class="modal fade" id="responseModal${req.requestId}" tabindex="-1" aria-hidden="true">
+                    <dialog class="support-response-dialog" id="responseModal${req.requestId}"
+                            aria-labelledby="responseTitle${req.requestId}">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <form method="post" action="${pageContext.request.contextPath}/hr/support">
                                     <div class="modal-header">
-                                        <h2 class="modal-title fs-5">Xử lý yêu cầu #<c:out value="${req.requestId}"/></h2>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                                        <h2 class="modal-title fs-5" id="responseTitle${req.requestId}">Xử lý yêu cầu #<c:out value="${req.requestId}"/></h2>
+                                        <button type="button" class="btn-close" data-support-close aria-label="Đóng"></button>
                                     </div>
                                     <div class="modal-body">
                                         <input type="hidden" name="csrfToken" value="<%= com.internship.util.CsrfToken.expose(request) %>">
@@ -89,13 +123,13 @@
                                                   rows="4" maxlength="2000" required><c:out value="${req.response}"/></textarea>
                                     </div>
                                     <div class="modal-footer">
-                                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
+                                        <button class="btn btn-outline-secondary" type="button" data-support-close>Hủy</button>
                                         <button class="btn btn-primary" type="submit">Lưu phản hồi</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
-                    </div>
+                    </dialog>
                 </c:forEach>
             </div>
 
@@ -126,11 +160,19 @@
                                         <div class="small mt-1"><b>Phản hồi:</b> <c:out value="${req.response}"/></div>
                                     </c:if>
                                 </td>
-                                <td><span class="badge"><c:out value="${req.status}"/></span></td>
+                                <td><span class="badge support-status" data-status="<c:out value='${req.status}'/>">
+                                    <c:choose>
+                                        <c:when test="${req.status eq 'PENDING'}">Chờ xử lý</c:when>
+                                        <c:when test="${req.status eq 'IN_PROGRESS'}">Đang xử lý</c:when>
+                                        <c:when test="${req.status eq 'RESOLVED'}">Đã giải quyết</c:when>
+                                        <c:when test="${req.status eq 'REJECTED'}">Đã từ chối</c:when>
+                                        <c:otherwise><c:out value="${req.status}"/></c:otherwise>
+                                    </c:choose>
+                                </span></td>
                                 <td><c:out value="${fn:replace(req.createdAt, 'T', ' ')}"/></td>
                                 <td>
                                     <button class="btn btn-sm btn-primary" type="button"
-                                            data-bs-toggle="modal" data-bs-target="#responseModal${req.requestId}">
+                                            data-support-open="responseModal${req.requestId}">
                                         Phản hồi
                                     </button>
                                 </td>
@@ -170,6 +212,20 @@
             });
             empty.classList.toggle('d-none', n !== 0 || !rows.length);
         }
+
+        document.querySelectorAll('[data-support-open]').forEach(button => {
+            button.addEventListener('click', () => {
+                const dialog = document.getElementById(button.dataset.supportOpen);
+                if (dialog && !dialog.open) dialog.showModal();
+            });
+        });
+
+        document.querySelectorAll('[data-support-close]').forEach(button => {
+            button.addEventListener('click', () => {
+                const dialog = button.closest('dialog');
+                if (dialog) dialog.close();
+            });
+        });
 
         q.addEventListener('input', filter);
         s.addEventListener('change', filter);
