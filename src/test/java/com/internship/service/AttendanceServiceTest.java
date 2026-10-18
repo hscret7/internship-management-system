@@ -163,11 +163,16 @@ class AttendanceServiceTest {
     @Test
     @DisplayName("Null dates default to last 30 days up to today safely")
     void testNullDatesDefaultGracefully() throws SQLException {
+        // Freeze an instant at which the server date (UTC+9) differs from Vietnam.
+        var clock = java.time.Clock.fixed(java.time.Instant.parse("2026-10-18T16:00:00Z"),
+                java.time.ZoneId.of("Asia/Tokyo"));
+        attendanceService = new AttendanceService(attendanceDAO, workScheduleDAO,
+                this::createMockConnection, clock);
         attendanceService.getReport(hrUser, 1, 1, null, null);
         assertNotNull(workScheduleDAO.lastFrom);
         assertNotNull(workScheduleDAO.lastTo);
-        assertEquals(LocalDate.now(), workScheduleDAO.lastTo);
-        assertEquals(LocalDate.now().minusDays(30), workScheduleDAO.lastFrom);
+        assertEquals(LocalDate.of(2026, 10, 18), workScheduleDAO.lastTo);
+        assertEquals(LocalDate.of(2026, 9, 18), workScheduleDAO.lastFrom);
     }
 
     @Test
