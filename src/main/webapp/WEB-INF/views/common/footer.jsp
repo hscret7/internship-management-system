@@ -38,7 +38,7 @@
 </div>
 <%-- /.app-shell --%>
 
-<script src="${ctx}/assets/js/app.js?v=20261013-integration"></script>
+<script src="${ctx}/assets/js/app.js?v=20261018-password"></script>
 
 <%-- Chuong thong bao nam trong header.jsp nen phai nap o MOI trang co khung chung,
      khong the de trong pageScript (chi co mot so trang set). Script tu thoat ngay

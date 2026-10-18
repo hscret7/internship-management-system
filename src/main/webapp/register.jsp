@@ -214,6 +214,6 @@
     </div>
 </div>
 
-<script src="${ctx}/assets/js/app.js?v=20261013-integration"></script>
+<script src="${ctx}/assets/js/app.js?v=20261018-password"></script>
 </body>
 </html>
