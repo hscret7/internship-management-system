@@ -12,6 +12,20 @@
 
  async function load(){if(!$('filterForm').reportValidity())return;$('scheduleRows').innerHTML='<tr><td colspan="6" class="text-center py-4">Đang tải…</td></tr>';try{const{body}=await call(`${api}?${query()}`);render(body.data||[]);}catch(e){$('scheduleRows').innerHTML='<tr><td colspan="6" class="text-center text-danger py-4">Không tải được danh sách lịch.</td></tr>';flash(e.message,'danger');}}
  function validTime(){if($('endTime').value<=$('startTime').value){$('endTime').setCustomValidity('Giờ kết thúc phải sau giờ bắt đầu.');$('endTime').reportValidity();$('endTime').setCustomValidity('');return false;}return true;}
+ let lookupSequence=0;
+ function clearEnrollment(){lookupSequence++;$('enrollmentId').replaceChildren(new Option('Tìm bằng email rồi chọn ghi danh',''));}
+ $('enrollmentEmail').addEventListener('input',clearEnrollment);
+ $('lookupEnrollment').addEventListener('click',async()=>{
+   clearEnrollment();const sequence=lookupSequence;
+   if(!$('enrollmentEmail').value.trim()||!$('enrollmentEmail').reportValidity()){flash('Nhập email đầy đủ hợp lệ.','warning');return;}
+   const button=$('lookupEnrollment');button.disabled=true;
+   try{const{body}=await call(`${api}?${new URLSearchParams({action:'enrollments',email:$('enrollmentEmail').value.trim()})}`);
+     if(sequence!==lookupSequence)return;
+     const rows=body.data||[];for(const row of rows){const option=new Option(`${row.internName} — ${row.programName} (#${row.enrollmentId}, ${row.enrollmentStatus})`,String(row.enrollmentId));option.disabled=row.enrollmentStatus!=='ACTIVE'||row.programStatus!=='ACTIVE';$('enrollmentId').add(option);}
+     flash(rows.length?'Chọn đúng chương trình ghi danh trước khi lưu.':'Không tìm thấy ghi danh cho email này.',rows.length?'info':'warning');
+   }catch(e){if(sequence===lookupSequence)flash(e.message,'danger');}finally{button.disabled=false;}
+ });
+ $('addBulkEnrollment').addEventListener('click',()=>{if(!$('enrollmentId').reportValidity())return;const ids=new Set($('enrollmentIds').value.split(',').map(x=>x.trim()).filter(Boolean));ids.add($('enrollmentId').value);$('enrollmentIds').value=[...ids].join(', ');$('bulkForm').classList.remove('d-none');});
  $('scheduleForm').addEventListener('submit',async e=>{e.preventDefault();if(!e.currentTarget.reportValidity()||!validTime())return;try{await post(new URLSearchParams({action:'create',csrfToken:token,enrollmentId:$('enrollmentId').value,workDate:$('workDate').value,startTime:$('startTime').value,endTime:$('endTime').value,note:$('note').value}));flash('Đã lưu ca làm thành công.','success');await load();}catch(err){flash(err.message,'danger');}});
  $('bulkToggle').addEventListener('click',()=>$('bulkForm').classList.toggle('d-none'));
  $('bulkForm').addEventListener('submit',async e=>{e.preventDefault();if(!e.currentTarget.reportValidity()||!['workDate','startTime','endTime'].every(id=>$(id).reportValidity())||!validTime())return;const ids=[...new Set($('enrollmentIds').value.split(',').map(x=>x.trim()).filter(Boolean))];if(!ids.length||ids.length>100||ids.some(x=>!/^[1-9]\d*$/.test(x))){flash('Nhập 1–100 mã ghi danh dương, phân tách bằng dấu phẩy.','warning');return;}try{const{body}=await post(new URLSearchParams({action:'bulk-create',csrfToken:token,enrollmentIds:ids.join(','),workDate:$('workDate').value,startTime:$('startTime').value,endTime:$('endTime').value,note:$('note').value}));const d=body.data||{},failed=(d.results||[]).filter(x=>!x.success);flash(`${d.successCount||0} ca đã lưu; ${d.failureCount||0} ca lỗi.${failed.length?' Xung đột/không hợp lệ: '+failed.map(x=>x.enrollmentId+' ('+x.errorCode+')').join(', '):''}`,failed.length?'warning':'success');await load();}catch(err){flash(err.message,'danger');}});

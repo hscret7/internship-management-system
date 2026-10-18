@@ -2,6 +2,8 @@ package com.internship.controller;
 
 import com.internship.model.User;
 import com.internship.service.AttendanceService;
+import com.internship.service.EnrollmentLookupService;
+import com.internship.service.ScheduleLeaveException;
 import com.internship.service.AttendanceService.AttendanceReportRow;
 import com.internship.util.UserRoleChecks;
 
@@ -21,11 +23,17 @@ import java.sql.SQLException;
 public class AttendanceServlet extends HttpServlet {
 
     private AttendanceService attendanceService;
+    private EnrollmentLookupService enrollmentLookup = new EnrollmentLookupService();
 
     public AttendanceServlet() {}
 
     AttendanceServlet(AttendanceService attendanceService) {
         this.attendanceService = attendanceService;
+    }
+
+    AttendanceServlet(AttendanceService attendanceService, EnrollmentLookupService enrollmentLookup) {
+        this.attendanceService = java.util.Objects.requireNonNull(attendanceService);
+        this.enrollmentLookup = java.util.Objects.requireNonNull(enrollmentLookup);
     }
 
     @Override
@@ -49,6 +57,8 @@ public class AttendanceServlet extends HttpServlet {
                     return;
                 }
                 
+                var choices = enrollmentLookup.lookup(currentUser, null);
+                req.setAttribute("enrollmentChoices", choices);
                 String enrollParam = req.getParameter("enrollmentId");
                 int enrollmentId = 0;
                 try {
@@ -57,6 +67,16 @@ public class AttendanceServlet extends HttpServlet {
                     // ignore, keep 0
                 }
                 
+                if (enrollmentId > 0) {
+                    final int selected = enrollmentId;
+                    if (choices.stream().noneMatch(c -> c.enrollmentId() == selected)) {
+                        resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền truy cập ghi danh.");
+                        return;
+                    }
+                } else if (choices.size() == 1) {
+                    enrollmentId = choices.get(0).enrollmentId();
+                }
+
                 LocalDate from = LocalDate.now().minusDays(30);
                 LocalDate to = LocalDate.now();
                 try {
@@ -125,19 +145,24 @@ public class AttendanceServlet extends HttpServlet {
                 req.setAttribute("status", status);
                 req.getRequestDispatcher("/WEB-INF/views/hr/attendance.jsp").forward(req, resp);
             }
-        } catch (SQLException | IllegalArgumentException e) {
+        } catch (ScheduleLeaveException e) {
+            resp.sendError(e.status(), e.getMessage());
+        } catch (SQLException e) {
+            java.util.logging.Logger.getLogger(AttendanceServlet.class.getName())
+                    .log(java.util.logging.Level.SEVERE, "Attendance database operation failed", e);
+            resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            if (wantsJson(req)) writeJson(resp, "{\"error\":\"Không thể xử lý dữ liệu, vui lòng thử lại.\"}");
+            else resp.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Không thể xử lý dữ liệu, vui lòng thử lại.");
+        } catch (IllegalArgumentException e) {
             // Client xin JSON thi phai nhan JSON: neu forward sang /error/500.jsp thi
             // ho nhan ve HTML, va loi nhap lieu (khoang > 367 ngay, from > to) bi bao
             // nham thanh 500.
             if (wantsJson(req)) {
-                resp.setStatus(e instanceof IllegalArgumentException
-                        ? HttpServletResponse.SC_BAD_REQUEST
-                        : HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 writeJson(resp, "{\"error\":" + quote(e.getMessage()) + "}");
                 return;
             }
-            req.setAttribute("error", e.getMessage());
-            req.getRequestDispatcher("/error/500.jsp").forward(req, resp);
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
     }
 

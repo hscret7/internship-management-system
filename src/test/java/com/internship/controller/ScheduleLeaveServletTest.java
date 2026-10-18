@@ -108,4 +108,47 @@ class ScheduleLeaveServletTest {
         login("INTERN"); parameters.put("csrfToken", CsrfToken.expose(request)); parameters.put("action", "cancel");
         servlet.doPost(request, response); assertEquals(403, status); assertFalse(called);
     }
+    @Test void lookupReturnsAllChoicesWithoutRequiringDateFilters() throws Exception {
+        servlet = new ScheduleLeaveServlet(new ScheduleLeaveService(), new EnrollmentLookupService() {
+            @Override public List<ScheduleEnrollmentDAO.Choice> lookup(User actor, String email) {
+                assertEquals("intern@example.com", email);
+                return List.of(new ScheduleEnrollmentDAO.Choice(1, 10, "A", "ACTIVE", "ACTIVE", "Name", email),
+                        new ScheduleEnrollmentDAO.Choice(2, 20, "B", "ACTIVE", "ACTIVE", "Name", email));
+            }
+        });
+        login("HR"); route="/api/hr/work-schedules"; parameters.clear();
+        parameters.put("action", "enrollments");parameters.put("email", "intern@example.com");
+        servlet.doGet(request,response);assertEquals(200,status);
+        assertTrue(body.toString().contains("\"enrollmentId\":1"));
+        assertTrue(body.toString().contains("\"enrollmentId\":2"));
+    }
+    @Test void lookupDatabaseFailureReturns503NotEmptySuccess() throws Exception {
+        servlet = new ScheduleLeaveServlet(new ScheduleLeaveService(), new EnrollmentLookupService() {
+            @Override public List<ScheduleEnrollmentDAO.Choice> lookup(User actor, String email) throws SQLException {
+                throw new SQLException("private-database-detail");
+            }
+        });
+        login("HR");route="/api/hr/work-schedules";parameters.put("action","enrollments");
+        servlet.doGet(request,response);assertEquals(503,status);
+        assertTrue(body.toString().contains("DATABASE_ERROR"));
+        assertFalse(body.toString().contains("private-database-detail"));
+    }
+    @Test void internCannotUseHrLookupRoute() throws Exception {
+        login("INTERN");route="/api/hr/work-schedules";parameters.put("action","enrollments");
+        servlet.doGet(request,response);assertEquals(403,status);
+    }
+
+    @Test void lookupUnknownEmailReturnsEmptyList() throws Exception {
+        servlet = new ScheduleLeaveServlet(new ScheduleLeaveService(), new EnrollmentLookupService() {
+            @Override public List<ScheduleEnrollmentDAO.Choice> lookup(User actor, String email) { return List.of(); }
+        });
+        login("HR");route="/api/hr/work-schedules";parameters.put("action","enrollments");
+        servlet.doGet(request,response);assertEquals(200,status);
+        assertTrue(body.toString().contains("\"data\":[]"));
+    }
+    @Test void internCannotLookupOtherEmailOnOwnRoute() throws Exception {
+        login("INTERN");parameters.put("action","enrollments");parameters.put("email","other@example.com");
+        servlet.doGet(request,response);assertEquals(403,status);
+    }
+
 }

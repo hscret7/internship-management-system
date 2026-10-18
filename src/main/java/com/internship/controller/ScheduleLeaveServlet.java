@@ -19,8 +19,12 @@ import java.util.logging.*;
 public class ScheduleLeaveServlet extends HttpServlet {
     private static final Logger LOG = Logger.getLogger(ScheduleLeaveServlet.class.getName());
     private final ScheduleLeaveService service;
+    private final EnrollmentLookupService lookup;
     public ScheduleLeaveServlet() { this(new ScheduleLeaveService()); }
-    public ScheduleLeaveServlet(ScheduleLeaveService service) { this.service = Objects.requireNonNull(service); }
+    public ScheduleLeaveServlet(ScheduleLeaveService service) { this(service, new EnrollmentLookupService()); }
+    public ScheduleLeaveServlet(ScheduleLeaveService service, EnrollmentLookupService lookup) {
+        this.service = Objects.requireNonNull(service); this.lookup = Objects.requireNonNull(lookup);
+    }
 
     @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         handle(request, response, false);
@@ -44,7 +48,12 @@ public class ScheduleLeaveServlet extends HttpServlet {
                 throw new ScheduleLeaveException(403, "INVALID_CSRF", "Phiên biểu mẫu không hợp lệ.");
             boolean schedule = request.getServletPath().endsWith("work-schedules");
             Object data;
-            if (!write) {
+            if (!write && "enrollments".equals(request.getParameter("action"))) {
+                data = lookup.lookup(actor, request.getParameter("email")).stream()
+                        .map(c -> Be4Json.fields("enrollmentId", c.enrollmentId(), "programId", c.programId(),
+                                "programName", c.programName(), "enrollmentStatus", c.enrollmentStatus(),
+                                "programStatus", c.programStatus(), "internName", c.internName(), "email", c.email())).toList();
+            } else if (!write) {
                 Integer enrollment = optionalId(request, "enrollmentId"), program = optionalId(request, "programId");
                 LocalDate from = date(request, "from"), to = date(request, "to");
                 data = schedule
