@@ -7,6 +7,15 @@
   const rows = document.getElementById('rows');
   const msg = document.getElementById('msg');
   let token = '';
+  let participantDirectory = [];
+  let directoryReady;
+  async function loadDirectory() {
+    const response = await fetch(c + '/api/hr/work-schedules?action=interns', {credentials:'same-origin', headers:{Accept:'application/json'}});
+    if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').includes('application/json')) throw Error('Không tải được danh sách email TTS.');
+    const body = await response.json();
+    if (!body.success || !Array.isArray(body.data)) throw Error('Không tải được danh sách email TTS.');
+    participantDirectory = body.data;
+  }
 
   const field = (n) => f.elements[n];
   const say = (t, isErr) => {
@@ -40,17 +49,26 @@
   }
 
   async function detail(id) {
-    let d = await (await fetch(c + '/meetings?id=' + id)).json();
+    await directoryReady;
+    let response = await fetch(c + '/meetings?id=' + encodeURIComponent(id));
+    if (!response.ok) throw Error('Không tải được cuộc họp.');
+    let d = await response.json();
     let m = d.item;
     token = d.csrfToken || token;
     if (m.status === 'CANCELLED') {
       say('Cu\u1ed9c h\u1ecdp \u0111\u00e3 b\u1ecb h\u1ee7y, kh\u00f4ng th\u1ec3 ch\u1ec9nh s\u1eeda.', true);
       return;
     }
+    const emails = m.enrollmentIds.map(id => {
+      const entry = participantDirectory.find(it => it.enrollmentId === id && it.programId === m.programId);
+      if (!entry || !entry.email) throw Error('Một người tham gia không còn ghi danh hoạt động. Hãy tải lại và kiểm tra danh sách TTS.');
+      return entry.email;
+    });
     Object.keys(m).forEach((k) => {
-      if (k === 'startsAt' || k === 'endsAt') return;
+      if (k === 'startsAt' || k === 'endsAt' || k === 'enrollmentIds') return;
       if (field(k)) field(k).value = Array.isArray(m[k]) ? m[k].join(',') : m[k];
     });
+    field('enrollmentIds').value = emails.join(', ');
     field('startsAt').value = localInput(m.startsAt);
     field('endsAt').value = localInput(m.endsAt);
     field('programId').readOnly = true;
@@ -69,6 +87,9 @@
     try {
       let x = Object.fromEntries(new FormData(f));
       x.action = x.id ? 'update' : 'create';
+      const emails = x.enrollmentIds.split(',').map(value => value.trim());
+      if (!emails.length || emails.some(value => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) throw Error('Nhập email đầy đủ của người tham gia, phân tách bằng dấu phẩy.');
+      x.enrollmentIds = emails.join(',');
       if (!x.startsAt || !x.endsAt) throw Error('Vui l\u00f2ng nh\u1eadp \u0111\u1ea7y \u0111\u1ee7 th\u1eddi gian b\u1eaft \u0111\u1ea7u v\u00e0 k\u1ebft th\u00fac.');
       const start = new Date(iso(x.startsAt)), end = new Date(iso(x.endsAt));
       if (isNaN(start.getTime()) || isNaN(end.getTime())) throw Error('Ng\u00e0y gi\u1edd kh\u00f4ng h\u1ee3p l\u1ec7. Vui l\u00f2ng ki\u1ec3m tra l\u1ea1i.');
@@ -88,7 +109,7 @@
     finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'L\u01b0u'; } }
   };
 
-  rows.onclick = (e) => { let b = e.target.closest('[data-id]'); if (b) detail(b.dataset.id); };
+  rows.onclick = (e) => { let b = e.target.closest('[data-id]'); if (b) detail(b.dataset.id).catch(error => say(error.message, true)); };
   document.getElementById('new').onclick = () => { f.reset(); field('id').value = ''; field('revision').value = ''; field('programId').readOnly = false; document.getElementById('cancel').classList.add('d-none'); };
   document.getElementById('cancel').onclick = async () => {
     if (!confirm('H\u1ee7y cu\u1ed9c h\u1ecdp n\u00e0y?')) return;
@@ -96,5 +117,7 @@
     catch (e) { say(e.message, true); }
   };
 
-  load();
+  directoryReady = loadDirectory();
+  directoryReady.catch(error => say(error.message, true));
+  load().catch(error => say(error.message, true));
 })();

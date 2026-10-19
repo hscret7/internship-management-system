@@ -37,7 +37,18 @@ class AuditLogDAOTimeZoneTest {
         new AuditLogDAO(() -> jdbc.connection).insert(5L,"LOGIN","USER",5L,"SUCCESS");
         assertTrue(jdbc.initialized); assertTrue(jdbc.closed);
     }
+    @Test void actorEmailFilterIsBoundInCountAndPageWithoutDroppingSystemRows() throws Exception {
+        FakeJdbc jdbc = new FakeJdbc();
+        String email = "o'neil@example.com";
+        new AuditLogDAO(() -> jdbc.connection).search(new Query(null,null,null,null,null,null,1,20,email));
+        assertEquals(2, jdbc.sql.size());
+        assertTrue(jdbc.sql.stream().allMatch(sql -> sql.contains("LEFT JOIN users") && sql.contains("LOWER(TRIM(u.email)) = LOWER(?)")));
+        assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.contains(email)));
+        assertEquals(List.of(email,email), jdbc.values);
+    }
     private static class FakeJdbc {
+        List<String> sql = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
         boolean initialized, closed, setupFailure, prepared;
         List<Instant> bounds = new ArrayList<>();
         Connection connection = proxy(Connection.class, (name,args) -> switch(name) {
@@ -51,8 +62,10 @@ class AuditLogDAOTimeZoneTest {
             });
             case "prepareStatement" -> {
                 assertTrue(initialized); prepared=true;
+                sql.add((String)args[0]);
                 boolean count=((String)args[0]).contains("COUNT(*)");
                 yield proxy(PreparedStatement.class, (method,values) -> switch(method) {
+                    case "setObject" -> {this.values.add(values[1]); yield null;}
                     case "setTimestamp" -> {
                         assertEquals(3,values.length,"Date filters must provide a Calendar");
                         assertEquals("UTC",((Calendar)values[2]).getTimeZone().getID());

@@ -32,8 +32,17 @@ public class AuditLogService {
         if(value==null || !value.matches("[A-Z][A-Z0-9_]{0,63}")) throw new IllegalArgumentException("Invalid audit code");
     }
     public record Query(Long actorUserId,String action,String objectType,String result,
-                        Instant from,Instant to,int page,int size) {
+                        Instant from,Instant to,int page,int size,String actorEmail) {
+        public Query(Long actorUserId,String action,String objectType,String result,
+                     Instant from,Instant to,int page,int size) {
+            this(actorUserId,action,objectType,result,from,to,page,size,null);
+        }
         public Query {
+            if (actorEmail != null) {
+                actorEmail = actorEmail.trim();
+                if (actorEmail.length() > 254 || !actorEmail.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+                    throw new IllegalArgumentException("Invalid actor email");
+            }
             positive(actorUserId); if(action!=null) code(action); if(objectType!=null) code(objectType);
             if(result!=null && !Set.of("SUCCESS","FAILURE").contains(result)) throw new IllegalArgumentException("Invalid result");
             if(from!=null && to!=null && !from.isBefore(to)) throw new IllegalArgumentException("Invalid date range");

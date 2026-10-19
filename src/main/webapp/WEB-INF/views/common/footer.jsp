@@ -153,6 +153,7 @@
 </c:if>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="${ctx}/assets/js/email-autocomplete.js?v=20261019-email-suggest"></script>
 <script src="${ctx}/assets/js/app.js?v=20261019-khanh-base"></script>
 
 <%-- Chuong thong bao nam trong header.jsp nen phai nap o MOI trang co khung chung,

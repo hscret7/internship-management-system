@@ -20,11 +20,17 @@ import java.util.List;
 public class AllowanceServlet extends HttpServlet {
 
     private AllowanceService allowanceService;
+    private com.internship.service.EnrollmentLookupService enrollmentLookup = new com.internship.service.EnrollmentLookupService();
 
     public AllowanceServlet() {}
 
     AllowanceServlet(AllowanceService allowanceService) {
         this.allowanceService = allowanceService;
+    }
+
+    AllowanceServlet(AllowanceService service, com.internship.service.EnrollmentLookupService lookup) {
+        this.allowanceService = service;
+        this.enrollmentLookup = lookup;
     }
 
     @Override
@@ -46,7 +52,8 @@ public class AllowanceServlet extends HttpServlet {
             Integer enrollmentId = null;
             try {
                 enrollmentId = (enrollParam != null && !enrollParam.trim().isEmpty()) ? Integer.parseInt(enrollParam) : null;
-            } catch (NumberFormatException e) { }
+            } catch (NumberFormatException e) { throw new IllegalArgumentException("Ghi danh không hợp lệ."); }
+            enrollmentId = resolveEnrollment(currentUser, enrollmentId, req.getParameter("email"));
 
             List<Allowance> list = allowanceService.getAllowances(currentUser, enrollmentId);
             req.setAttribute("allowances", list);
@@ -56,6 +63,8 @@ public class AllowanceServlet extends HttpServlet {
             } else {
                 req.getRequestDispatcher("/WEB-INF/views/hr/allowances.jsp").forward(req, resp);
             }
+        } catch (com.internship.service.ScheduleLeaveException e) {
+            resp.sendError(e.status(), e.getMessage());
         } catch (SQLException | IllegalArgumentException e) {
             log("Allowance lookup failed",e);
             resp.sendError(e instanceof SQLException?503:400,"Không thể tải phụ cấp. Kiểm tra bộ lọc hoặc thử lại sau.");
@@ -80,7 +89,7 @@ public class AllowanceServlet extends HttpServlet {
                 if ("create".equals(action)) {
                     Allowance a = new Allowance();
                     try {
-                        a.setEnrollmentId(Integer.parseInt(req.getParameter("enrollmentId")));
+                        a.setEnrollmentId(resolveEnrollment(currentUser, Integer.valueOf(req.getParameter("enrollmentId")), req.getParameter("internEmail")));
                         a.setAmount(new BigDecimal(req.getParameter("amount")));
                     } catch (Exception e) {
                         resp.sendRedirect(req.getContextPath() + "/hr/allowances?error=" + java.net.URLEncoder.encode("Dữ liệu nhập không hợp lệ", "UTF-8"));
@@ -112,4 +121,16 @@ public class AllowanceServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/hr/allowances?error=" + java.net.URLEncoder.encode(e instanceof SQLException ? "Không thể cập nhật phụ cấp lúc này." : "Dữ liệu phụ cấp không hợp lệ.", "UTF-8"));
         }
     }
+    private Integer resolveEnrollment(User actor, Integer selected, String email) throws SQLException {
+        if (email == null || email.isBlank()) return selected;
+        var choices = enrollmentLookup.lookup(actor, email);
+        if (selected != null) {
+            if (choices.stream().noneMatch(c -> c.enrollmentId() == selected))
+                throw new IllegalArgumentException("Ghi danh không khớp email.");
+            return selected;
+        }
+        if (choices.size() != 1) throw new IllegalArgumentException("Hãy tra cứu email và chọn đúng chương trình ghi danh.");
+        return choices.getFirst().enrollmentId();
+    }
+
 }

@@ -26,6 +26,12 @@ class AuditLogServiceTest {
   assertThrows(IllegalArgumentException.class,()->new AuditLogService.Query(null,null,null,null,null,null,1,101));
   var now=Instant.now();assertThrows(IllegalArgumentException.class,()->new AuditLogService.Query(null,null,null,null,now,now,1,20));
  }
+ @Test void actorEmailIsExactValidatedAndTrimmed() {
+  var q=new AuditLogService.Query(null,null,null,null,null,null,1,20," Person+qa@Example.com ");
+  assertEquals("Person+qa@Example.com",q.actorEmail());
+  for(String email:List.of("bad","a b@example.com","a@example.com%".repeat(30)))
+   assertThrows(IllegalArgumentException.class,()->new AuditLogService.Query(null,null,null,null,null,null,1,20,email));
+ }
  @Test void onlyActiveAdminCanQuery() throws Exception {
   var s=new AuditLogService(new AuditLogDAO(){@Override public AuditLogService.Page search(AuditLogService.Query q){return new AuditLogService.Page(List.of(),0,q.page(),q.size());}});
   var q=new AuditLogService.Query(null,null,null,null,null,null,1,20);

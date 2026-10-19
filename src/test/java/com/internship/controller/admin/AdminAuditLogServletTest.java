@@ -16,14 +16,23 @@ class AdminAuditLogServletTest {
  @Test void invalidDateReturns400()throws Exception{var h=new H();h.params.put("from","bad");h.run();assertEquals(400,h.status);assertFalse(h.called);}
  @Test void paginatedResponseHasUtcAndNoSecrets()throws Exception{var h=new H();h.run();assertTrue(h.called);assertTrue(h.body.toString().contains("\"actorUserId\":null"));assertTrue(h.body.toString().contains("2026-10-07T09:00:00Z"));assertFalse(h.body.toString().contains("password"));assertEquals("no-store",h.cache);}
  @Test void dbErrorDoesNotLeakSql()throws Exception{var h=new H();h.failure=true;h.run();assertEquals(503,h.status);assertFalse(h.body.toString().contains("SECRET"));}
+ @Test void actorEmailFilterReachesServiceAndIdentityIsEscaped()throws Exception{
+  var h=new H();h.params.put("actorEmail","Admin@example.com");h.identity=true;h.run();
+  assertEquals("Admin@example.com",h.query.actorEmail());
+  assertTrue(h.body.toString().contains("\"actorEmail\":\"Admin@example.com\""));
+  assertFalse(h.body.toString().contains("<script>"));
+ }
+ @Test void invalidActorEmailRejectedBeforeSearch()throws Exception{
+  var h=new H();h.params.put("actorEmail","bad");h.run();assertEquals(400,h.status);assertFalse(h.called);
+ }
  static class H {
-  User user=new User();Map<String,String>params=new HashMap<>();int status=200;String cache;boolean called,failure;StringWriter body=new StringWriter();
+  User user=new User();Map<String,String>params=new HashMap<>();int status=200;String cache;boolean called,failure,identity;AuditLogService.Query query;StringWriter body=new StringWriter();
   H(){Role r=new Role();r.setRoleName("ADMIN");user.setRole(r);user.setStatus(UserStatus.ACTIVE);}
   void run()throws Exception{
    HttpSession session=p(HttpSession.class,(m,a)->m.equals("getAttribute")?user:null);
    HttpServletRequest req=p(HttpServletRequest.class,(m,a)->switch(m){case "getSession"->session;case "getParameter"->params.get(a[0]);default->null;});
    HttpServletResponse res=p(HttpServletResponse.class,(m,a)->switch(m){case "getWriter"->new PrintWriter(body);case "setStatus"->{status=(int)a[0];yield null;}case "setHeader"->{if(a[0].equals("Cache-Control"))cache=(String)a[1];yield null;}default->null;});
-   var service=new AuditLogService(new AuditLogDAO(){@Override public AuditLogService.Page search(AuditLogService.Query q)throws SQLException{called=true;if(failure)throw new SQLException("SECRET SQL");return new AuditLogService.Page(List.of(new AuditLog(1,null,"LOGIN","USER",null,Instant.parse("2026-10-07T09:00:00Z"),"FAILURE")),1,q.page(),q.size());}});
+   var service=new AuditLogService(new AuditLogDAO(){@Override public AuditLogService.Page search(AuditLogService.Query q)throws SQLException{called=true;query=q;if(failure)throw new SQLException("SECRET SQL");return new AuditLogService.Page(List.of(identity?new AuditLog(1,2L,"LOGIN","USER",2L,Instant.parse("2026-10-07T09:00:00Z"),"SUCCESS","Admin@example.com","<script>"):new AuditLog(1,null,"LOGIN","USER",null,Instant.parse("2026-10-07T09:00:00Z"),"FAILURE")),1,q.page(),q.size());}});
    new AdminAuditLogServlet(service).doGet(req,res);
   }
  }

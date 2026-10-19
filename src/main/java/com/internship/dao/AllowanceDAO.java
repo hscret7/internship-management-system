@@ -38,9 +38,9 @@ public class AllowanceDAO {
 
     public List<Allowance> list(Integer enrollmentId, Long ownerId, Connection conn) throws SQLException {
         StringBuilder sql = new StringBuilder(
-            "SELECT a.*, ip.full_name as intern_name FROM allowances a " +
+            "SELECT a.*, ip.full_name as intern_name, COALESCE(u.email,ip.email) AS intern_email, p.program_name FROM allowances a " +
             "JOIN program_enrollments pe ON a.enrollment_id = pe.enrollment_id " +
-            "JOIN intern_profiles ip ON pe.intern_profile_id = ip.profile_id WHERE 1=1"
+            "JOIN intern_profiles ip ON pe.intern_profile_id = ip.profile_id LEFT JOIN users u ON u.user_id=ip.user_id JOIN internship_programs p ON p.program_id=pe.program_id WHERE 1=1"
         );
         List<Object> params = new ArrayList<>();
         if (enrollmentId != null) {
@@ -71,6 +71,8 @@ public class AllowanceDAO {
                     a.setCreatedBy(rs.getLong("created_by"));
                     a.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
                     a.setInternName(rs.getString("intern_name"));
+                    a.setInternEmail(rs.getString("intern_email"));
+                    a.setProgramName(rs.getString("program_name"));
                     result.add(a);
                 }
             }
