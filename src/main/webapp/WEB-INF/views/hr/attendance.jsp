@@ -159,7 +159,7 @@
      EL khong tu escape, va dieu do la co y o day. --%>
 <script id="attendance-data" type="application/json" data-attendance-json>${empty attendanceJson ? '[]' : attendanceJson}</script>
 
-<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email-suggest" defer></script>
 <script>
     (() => {
         const form = document.getElementById('attendanceFilter'),

@@ -79,6 +79,9 @@
         search.addEventListener('click',()=>lookup());
         email.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();lookup();}});
         if(form)form.addEventListener('submit',event=>{if(!choice.reportValidity()){event.preventDefault();event.stopImmediatePropagation();choice.focus();}}, true);
+        if (typeof window !== 'undefined' && window.EmailAutocomplete) {
+            window.EmailAutocomplete.attach(email, {context:ctx,scope:application?'application':'enrollment',onSelect:()=>lookup()});
+        }
         if(initial && (application||email.value.trim()))lookup(initial);
         else if(initial)notify('Đang giữ bộ lọc đã chọn. Tra cứu email để đổi, hoặc bấm Xem tất cả.');
         else notify(application?'Chỉ hiện đơn APPROVED chưa ghi danh và hồ sơ chưa có chương trình đang hoạt động.':'Một email có thể có nhiều ghi danh; chọn đúng chương trình.');

@@ -19,5 +19,5 @@
     <div class="d-flex justify-content-between align-items-center"><button id="reportPrevious" class="btn btn-outline-primary" type="button">Trang trước</button><span id="reportPage"></span><button id="reportNext" class="btn btn-outline-primary" type="button">Trang sau</button></div>
     </section><section id="assessmentHistory" class="fe3-panel" tabindex="-1" hidden><h2>Lịch sử đánh giá</h2><div id="assessmentHistoryRows"></div></section>
 </section>
-<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email-suggest" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

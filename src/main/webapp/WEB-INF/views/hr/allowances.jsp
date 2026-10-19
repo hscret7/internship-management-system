@@ -190,5 +190,5 @@
     });
 </script>
 
-<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email-suggest" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

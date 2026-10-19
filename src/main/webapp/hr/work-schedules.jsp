@@ -20,7 +20,7 @@
         </label>
         <div class="input-group">
             <span class="input-group-text bg-light"><i class="bi bi-search text-muted"></i></span>
-            <input class="form-control" id="internEmail" type="text" list="internEmailList"
+            <input class="form-control" id="internEmail" data-email-suggest="enrollment" data-context="${ctx}" type="text" list="internEmailList"
                    placeholder="Nhập hoặc chọn Gmail (vd: nam.nv@student.edu.vn)" required autocomplete="off">
             <button class="btn btn-outline-secondary" type="button" id="btnClearEmail" title="Xóa chọn">
                 <i class="bi bi-x"></i>
