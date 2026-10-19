@@ -15,6 +15,12 @@ public class Allowance {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String internName;
+    private String internEmail;
+    private String programName;
+    public String getInternEmail() { return internEmail; }
+    public void setInternEmail(String value) { internEmail = value; }
+    public String getProgramName() { return programName; }
+    public void setProgramName(String value) { programName = value; }
 
     public Allowance() {
     }

@@ -25,13 +25,14 @@ public class AdminAuditLogServlet extends HttpServlet {
         }
         try {
             var q=new AuditLogService.Query(id(req,"actorUserId"),text(req,"action"),text(req,"objectType"),
-                    text(req,"result"),instant(req,"from"),instant(req,"to"),number(req,"page",1),number(req,"size",20));
+                    text(req,"result"),instant(req,"from"),instant(req,"to"),number(req,"page",1),number(req,"size",20),text(req,"actorEmail"));
             var page=service.search(user,q);
             StringBuilder json=new StringBuilder("{\"items\":[");
             boolean first=true;
             for(AuditLog log:page.items()) {
                 if(!first) json.append(','); first=false;
                 json.append("{\"id\":").append(log.id()).append(",\"actorUserId\":").append(log.actorUserId())
+                    .append(",\"actorEmail\":").append(quote(log.actorEmail())).append(",\"actorName\":").append(quote(log.actorName()))
                     .append(",\"action\":").append(quote(log.action())).append(",\"objectType\":").append(quote(log.objectType()))
                     .append(",\"objectId\":").append(log.objectId()).append(",\"occurredAt\":").append(quote(log.occurredAt().toString()))
                     .append(",\"result\":").append(quote(log.result())).append('}');
@@ -56,6 +57,7 @@ public class AdminAuditLogServlet extends HttpServlet {
         catch(java.time.format.DateTimeParseException e) { throw new IllegalArgumentException("Invalid instant",e); }
     }
     private static String quote(String value) {
+        if (value == null) return "null";
         StringBuilder out=new StringBuilder("\"");
         for(char c:value.toCharArray()) {
             if(c=='"'||c=='\\') out.append('\\').append(c);

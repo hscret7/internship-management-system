@@ -50,10 +50,8 @@
                 <label class="form-label" for="fProgram">Mã chương trình</label>
                 <input class="form-control" id="fProgram" name="programId" type="number" min="1">
             </div>
-            <div class="col-sm-6 col-lg-2">
-                <label class="form-label" for="fEnroll">Gmail / Mã ghi danh</label>
-                <input class="form-control" id="fEnroll" name="enrollmentId" type="text" list="enrollList" placeholder="Gmail hoặc mã">
-                <datalist id="enrollList"></datalist>
+            <div class="col-sm-6 col-lg-3" data-email-selection="enrollment" data-context="${ctx}" data-optional="true" data-email-name="email" data-program-target="fProgram">
+                <input id="fEnroll" name="enrollmentId" type="hidden" data-email-value>
             </div>
             <div class="col-sm-6 col-lg-2">
                 <label class="form-label" for="fStatus">Trạng thái</label>
@@ -100,6 +98,7 @@
 
 </div>
 
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
 <script>
     (() => {
         const ctx = '${pageContext.request.contextPath}';
@@ -195,7 +194,7 @@
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            load();
+            if (form.reportValidity()) load();
         });
         statusSelect.addEventListener('change', paint);
         document.querySelectorAll('[data-export-format]').forEach(button=>button.addEventListener('click',async()=>{
@@ -242,22 +241,10 @@
             .then((r) => r.json())
             .then((data) => {
                 if (data && data.success && Array.isArray(data.data)) {
-                    const dl = document.getElementById('enrollList');
-                    if (dl) {
-                        dl.innerHTML = '';
-                        data.data.forEach((it) => {
-                            if (it.enrollmentId && it.email) {
-                                internEmailMap[it.enrollmentId] = it.email;
-                            }
-                            if (it.email) {
-                                const opt = document.createElement('option');
-                                opt.value = it.email;
-                                opt.label = (it.fullName || '') + (it.programName ? ' (' + it.programName + ')' : '');
-                                dl.appendChild(opt);
-                            }
-                        });
-                        paint();
-                    }
+                    data.data.forEach(it => {
+                        if (it.enrollmentId && it.email) internEmailMap[it.enrollmentId] = it.email;
+                    });
+                    paint();
                 }
             })
             .catch(() => {});

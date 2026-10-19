@@ -55,13 +55,9 @@
                         <input type="hidden" name="csrfToken" value="<%= com.internship.util.CsrfToken.expose(request) %>">
                         <input type="hidden" name="action" value="create">
 
-                        <div class="mb-3">
-                            <label class="form-label" for="enrollmentId">Mã ghi danh *</label>
-                            <input class="form-control" id="enrollmentId" name="enrollmentId"
-                                   type="number" min="1" required>
-                            <div class="invalid-feedback">Nhập mã ghi danh dương.</div>
+                        <div class="mb-3" data-email-selection="enrollment" data-context="${ctx}" data-email-name="internEmail">
+                            <input type="hidden" id="enrollmentId" name="enrollmentId" data-email-value>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label" for="allowanceType">Loại phụ cấp *</label>
                             <select class="form-select" id="allowanceType" name="allowanceType" required>
@@ -102,9 +98,10 @@
                         <form class="d-flex gap-2" method="get"
                               action="${pageContext.request.contextPath}/hr/allowances">
                             <label class="visually-hidden" for="filterEnrollment">Mã ghi danh</label>
-                            <input class="form-control" id="filterEnrollment" name="enrollmentId"
-                                   type="number" min="1" placeholder="Mã ghi danh"
-                                   value="<c:out value='${param.enrollmentId}'/>">
+                            <div data-email-selection="enrollment" data-context="${ctx}" data-optional="true"
+                                 data-email-name="email" data-email="<c:out value='${param.email}'/>">
+                                <input type="hidden" id="filterEnrollment" name="enrollmentId" data-email-value value="<c:out value='${param.enrollmentId}'/>">
+                            </div>
                             <button class="btn btn-outline-primary" type="submit">Lọc</button>
                         </form>
                     </div>
@@ -114,7 +111,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>ID</th>
-                                    <th>Ghi danh</th>
+                                    <th>Thực tập sinh / chương trình</th>
                                     <th>Kỳ</th>
                                     <th>Loại</th>
                                     <th>Số tiền</th>
@@ -128,7 +125,7 @@
                                         <c:forEach var="a" items="${allowances}">
                                             <tr>
                                                 <td>#<c:out value="${a.allowanceId}"/></td>
-                                                <td>#<c:out value="${a.enrollmentId}"/></td>
+                                                <td><strong><c:out value="${a.internName}"/></strong><br><span class="text-primary"><c:out value="${a.internEmail}"/></span><br><small><c:out value="${a.programName}"/></small></td>
                                                 <td><c:out value="${a.period}"/></td>
                                                 <td><c:out value="${a.allowanceType}"/></td>
                                                 <td class="money">
@@ -193,4 +190,5 @@
     });
 </script>
 
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

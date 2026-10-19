@@ -47,24 +47,9 @@
         <div class="card-body">
             <form action="${ctx}/hr/attendance" method="get" class="row g-3"
                   id="attendanceFilter" novalidate>
-                <div class="col-md-3">
-                    <label class="form-label" for="fEmail"><i class="bi bi-envelope-at me-1 text-primary"></i>Gmail / Email TTS</label>
-                    <input type="text" id="fEmail" name="email" class="form-control"
-                           placeholder="nam.nv@student.edu.vn"
-                           value="<c:out value='${internEmail != null ? internEmail : param.email}'/>"
-                           list="internEmailList" autocomplete="off">
-                    <datalist id="internEmailList">
-                        <c:forEach var="item" items="${activeInterns}">
-                            <option value="${item.email}">
-                                <c:out value="${item.fullName}"/> <c:choose><c:when test="${item.enrollmentId != null}">- #${item.enrollmentId} (<c:out value="${item.programName}"/>)</c:when><c:otherwise>- (Chưa ghi danh)</c:otherwise></c:choose>
-                            </option>
-                        </c:forEach>
-                    </datalist>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="fEnrollment">Mã Ghi Danh (Tùy chọn)</label>
-                    <input type="number" id="fEnrollment" name="enrollmentId" class="form-control"
-                           placeholder="Tự động nhận diện qua Email"
+                <div class="col-md-6" data-email-selection="enrollment" data-context="${ctx}" data-optional="true"
+                     data-email-name="email" data-email="<c:out value='${internEmail != null ? internEmail : param.email}'/>">
+                    <input type="hidden" id="fEnrollment" name="enrollmentId" data-email-value
                            value="<c:out value='${enrollmentId != null ? enrollmentId : param.enrollmentId}'/>">
                 </div>
                 <div class="col-md-2">
@@ -174,66 +159,14 @@
      EL khong tu escape, va dieu do la co y o day. --%>
 <script id="attendance-data" type="application/json" data-attendance-json>${empty attendanceJson ? '[]' : attendanceJson}</script>
 
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
 <script>
     (() => {
         const form = document.getElementById('attendanceFilter'),
             from = document.getElementById('fFrom'),
             to = document.getElementById('fTo'),
             warn = document.getElementById('rangeWarning'),
-            warnText = document.getElementById('rangeWarningText'),
-            fEmail = document.getElementById('fEmail'),
-            fEnrollment = document.getElementById('fEnrollment');
-
-        // Dynamic 2-way sync between Email and Enrollment ID
-        const internMap = Object.create(null), enrollmentToEmailMap=Object.create(null);
-        fetch('${pageContext.request.contextPath}/api/hr/work-schedules?action=interns', {credentials:'same-origin',headers:{Accept:'application/json'}})
-            .then(async response=>{
-                if(!response.ok || response.redirected || !(response.headers.get('content-type')||'').includes('application/json')) throw Error('Không tải được gợi ý email.');
-                const body=await response.json();if(!body.success || !Array.isArray(body.data))throw Error('Không tải được gợi ý email.');
-                const list=document.getElementById('internEmailList');list.replaceChildren();
-                body.data.forEach(item=>{
-                    if(!item.email)return;
-                    if(item.enrollmentId){internMap[item.email.toLowerCase()]=String(item.enrollmentId);enrollmentToEmailMap[item.enrollmentId]=item.email;}
-                    list.appendChild(new Option(item.fullName+' · '+(item.programName||'Chưa ghi danh'),item.email));
-                });
-            }).catch(()=>{});
-
-        function syncEnrollmentFromEmail() {
-            if (!fEmail || !fEnrollment) return;
-            const email = (fEmail.value || '').trim().toLowerCase();
-            fEnrollment.value='';
-            if (email && Object.hasOwn(internMap,email)) {
-                const eid = internMap[email];
-                if (eid) {
-                    fEnrollment.value = eid;
-                } else {
-                    fEnrollment.value = '';
-                    fEnrollment.placeholder = 'Chưa có mã ghi danh';
-                }
-            }
-        }
-
-        function syncEmailFromEnrollment() {
-            if (!fEmail || !fEnrollment) return;
-            const eid = (fEnrollment.value || '').trim();
-            if (eid && Object.hasOwn(enrollmentToEmailMap,eid)) {
-                fEmail.value = enrollmentToEmailMap[eid];
-            }
-        }
-
-        if (fEmail) {
-            fEmail.addEventListener('input', syncEnrollmentFromEmail);
-            fEmail.addEventListener('change', syncEnrollmentFromEmail);
-        }
-        if (fEnrollment) {
-            fEnrollment.addEventListener('input', syncEmailFromEnrollment);
-            fEnrollment.addEventListener('change', syncEmailFromEnrollment);
-        }
-
-        // Auto-fill on initial load if email has value but enrollment is empty
-        if (fEmail && fEnrollment && fEmail.value && !fEnrollment.value) {
-            syncEnrollmentFromEmail();
-        }
+            warnText = document.getElementById('rangeWarningText');
 
         // Khong dung <input min/max>: tran la KHOANG chu khong phai mot moc ngay,
         // va moc 'to' phu thuoc 'from' nen phai tinh luc submit.

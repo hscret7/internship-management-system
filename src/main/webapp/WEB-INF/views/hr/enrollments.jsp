@@ -68,7 +68,9 @@
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="enroll"/>
-        <label>Mã đơn (Application ID): <input type="number" name="applicationId" value="${applicationId}" required/></label><br/>
+        <div class="mb-3" data-email-selection="application" data-context="${ctx}" data-email-name="applicationEmail">
+            <input type="hidden" id="applicationId" name="applicationId" value="<c:out value='${applicationId}'/>" data-email-value>
+        </div>
         <label>Chương trình:
             <select name="programId" required>
                 <option value="">-- Chọn --</option>
@@ -162,6 +164,7 @@
     </div>
 </section>
 
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>
 </c:otherwise>
 </c:choose>

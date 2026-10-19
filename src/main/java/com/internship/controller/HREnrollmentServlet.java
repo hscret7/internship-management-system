@@ -29,6 +29,7 @@ public class HREnrollmentServlet extends HttpServlet {
     private EnrollmentService enrollmentService;
     private InternshipProgramDAO programDAO;
     private MentorDAO mentorDAO;
+    private final com.internship.service.ApprovedApplicationLookupService applicationLookup = new com.internship.service.ApprovedApplicationLookupService();
 
     public HREnrollmentServlet() { }
 
@@ -73,6 +74,10 @@ public class HREnrollmentServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        if ("application-options".equals(action)) {
+            writeApplicationChoices(request, response, currentUser);
+            return;
+        }
         CsrfToken.expose(request);
 
         try {
@@ -149,6 +154,9 @@ public class HREnrollmentServlet extends HttpServlet {
                 default -> request.getSession().setAttribute("errorMessage",
                         "Hành động không hợp lệ.");
             }
+        } catch (com.internship.service.ScheduleLeaveException e) {
+            response.sendError(e.status(), e.getMessage());
+            return;
         } catch (IllegalStateException | IllegalArgumentException e) {
             request.getSession().setAttribute("errorMessage", e.getMessage());
         } catch (SQLException e) {
@@ -160,11 +168,42 @@ public class HREnrollmentServlet extends HttpServlet {
         response.sendRedirect(redirect);
     }
 
+    // Choices never create enrollments; POST keeps all existing approval/duplicate/capacity checks.
+    private void writeApplicationChoices(HttpServletRequest request, HttpServletResponse response, User actor)
+            throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-store");
+        try {
+            String raw = request.getParameter("applicationId");
+            Integer id = raw == null || raw.isBlank() ? null : parseIntParam(request, "applicationId");
+            var choices = applicationLookup.find(actor, request.getParameter("email"), id).stream()
+                    .map(c -> Be4Json.fields("applicationId", c.applicationId(), "internName", c.internName(), "email", c.email())).toList();
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", true, "data", choices)));
+        } catch (com.internship.service.ScheduleLeaveException e) {
+            response.setStatus(e.status());
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", e.getMessage())));
+        } catch (IllegalArgumentException e) {
+            response.setStatus(400);
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", e.getMessage())));
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Approved application lookup failed", e);
+            response.setStatus(503);
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", "Không thể tìm đơn lúc này. Vui lòng thử lại.")));
+        }
+    }
+
     // --- Action handlers ---
 
     private int handleEnroll(HttpServletRequest request, long hrUserId) throws SQLException {
         int applicationId = parseIntParam(request, "applicationId");
         int programId = parseIntParam(request, "programId");
+        String email = request.getParameter("applicationEmail");
+        if (email != null && !email.isBlank()) {
+            User actor = (User) request.getSession().getAttribute("currentUser");
+            boolean matches = applicationLookup.find(actor, email, null).stream()
+                    .anyMatch(c -> c.applicationId() == applicationId);
+            if (!matches) throw new IllegalArgumentException("Đơn đã chọn không khớp email hoặc không còn đủ điều kiện ghi danh.");
+        }
 
         String mentorValue = request.getParameter("mentorId");
         Integer mentorId = mentorValue == null || mentorValue.isBlank() ? null
