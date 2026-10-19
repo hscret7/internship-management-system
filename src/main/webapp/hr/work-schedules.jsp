@@ -49,6 +49,11 @@
             </div>
         </div>
     </div>
+    <div class="mb-3 d-none" id="scheduleEnrollmentGroup">
+     <label class="form-label" for="scheduleEnrollmentChoice">Chương trình thực tập *</label>
+     <select class="form-select" id="scheduleEnrollmentChoice" disabled></select>
+     <div class="form-text">Email này có nhiều ghi danh. Chọn chương trình cần tạo ca.</div>
+    </div>
     <div class="mb-3"><label class="form-label" for="workDate">Ngày làm việc *</label><input class="form-control" id="workDate" type="date" required><div class="invalid-feedback">Chọn ngày làm việc.</div></div>
     <div class="row g-3 mb-3"><div class="col-6"><label class="form-label" for="startTime">Bắt đầu *</label><input class="form-control" id="startTime" type="time" required><div class="invalid-feedback">Chọn giờ bắt đầu.</div></div><div class="col-6"><label class="form-label" for="endTime">Kết thúc *</label><input class="form-control" id="endTime" type="time" required><div class="invalid-feedback">Giờ kết thúc phải sau giờ bắt đầu.</div></div></div>
     <div class="mb-3"><label class="form-label" for="note">Ghi chú</label><textarea class="form-control" id="note" rows="2" maxlength="500"></textarea><div class="form-text">Tối đa 500 ký tự; không hỗ trợ ca qua đêm.</div></div>
@@ -62,5 +67,5 @@
   </div></section></div>
  </div>
 </div>
-<script src="${pageContext.request.contextPath}/assets/js/work-schedules.js?v=20261019-khanh-base" defer></script>
+<script src="${pageContext.request.contextPath}/assets/js/work-schedules.js?v=20261019-enrollment-choice" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

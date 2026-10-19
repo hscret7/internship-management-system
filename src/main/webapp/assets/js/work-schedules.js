@@ -34,7 +34,7 @@
       if (dataList) dataList.innerHTML = '';
       internsList.forEach(it => {
         if (it.email) {
-          emailMap[it.email.toLowerCase()] = it;
+          (emailMap[it.email.toLowerCase()] ||= []).push(it);
         }
         if (it.enrollmentId) {
           enrollmentMap[it.enrollmentId] = it;
@@ -58,11 +58,19 @@
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  function updateInternCard(inputVal) {
+  function updateInternCard(inputVal, selectedEnrollment = '') {
     const card = $('internInfoCard');
     const hiddenId = $('enrollmentId');
     const emailInput = $('internEmail');
     if (!card || !emailInput) return;
+    const choice = $('scheduleEnrollmentChoice');
+    const group = $('scheduleEnrollmentGroup');
+    choice.replaceChildren();
+    choice.value = '';
+    choice.required = false;
+    choice.disabled = true;
+    group.classList.add('d-none');
+    if (hiddenId) hiddenId.value = '';
 
     const val = (inputVal || emailInput.value || '').trim();
     if (!val) {
@@ -72,9 +80,34 @@
       return;
     }
 
-    const matched = emailMap[val.toLowerCase()] || internsList.find(it =>
-      (it.email && it.email.toLowerCase() === val.toLowerCase())
-    );
+    const matches = emailMap[val.toLowerCase()] || [];
+    const enrolled = matches.filter(it => it.enrollmentId);
+    let matched = matches[0];
+    if (enrolled.length > 1) {
+      group.classList.remove('d-none');
+      choice.disabled = false;
+      choice.required = true;
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Chọn chương trình thực tập';
+      choice.appendChild(placeholder);
+      enrolled.forEach(it => {
+        const option = document.createElement('option');
+        option.value = String(it.enrollmentId);
+        option.textContent = `${it.programName || 'Chương trình thực tập'} · #${it.enrollmentId}`;
+        choice.appendChild(option);
+      });
+      const selected = enrolled.find(it => String(it.enrollmentId) === selectedEnrollment);
+      choice.value = selected ? String(selected.enrollmentId) : '';
+      if (!selected) {
+        card.classList.add('d-none');
+        emailInput.setCustomValidity('');
+        return;
+      }
+      matched = selected;
+    } else if (enrolled.length === 1) {
+      matched = enrolled[0];
+    }
 
     if (matched) {
       card.classList.remove('d-none');
@@ -111,6 +144,10 @@
     }
   }
 
+  $('scheduleEnrollmentChoice').addEventListener('change', () => {
+    updateInternCard($('internEmail').value, $('scheduleEnrollmentChoice').value);
+  });
+
   if ($('internEmail')) {
     $('internEmail').addEventListener('input', e => updateInternCard(e.target.value));
     $('internEmail').addEventListener('change', e => updateInternCard(e.target.value));
@@ -130,7 +167,7 @@
       return;
     }
     target.innerHTML=rows.map(s => {
-      const email = s.internEmail || (enrollmentMap[s.enrollmentId] ? enrollmentMap[s.enrollmentId].email : (emailMap[s.internName?.toLowerCase()]?.email || ''));
+      const email = s.internEmail || (enrollmentMap[s.enrollmentId] ? enrollmentMap[s.enrollmentId].email : '');
       const emailHtml = email ? `<br><small class="text-primary font-monospace"><i class="bi bi-envelope me-1"></i>${esc(email)}</small>` : `<br><small class="text-muted">#${esc(s.enrollmentId)}</small>`;
       return `<tr>
         <td>${esc(localDate(s.workDate))}<br><span class="text-muted small">${esc(s.startTime)}–${esc(s.endTime)}</span></td>
