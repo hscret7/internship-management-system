@@ -71,4 +71,22 @@ class MeetingServletTest {
     @SuppressWarnings("unchecked")static <T>T p(Class<T> type,Call call) {
         return(T)Proxy.newProxyInstance(type.getClassLoader(),new Class[]{type},(o,m,a)->call.run(m.getName(),a));
     }
+
+    @Test void emailParticipantIsResolvedInSelectedProgramBeforeCreate()throws Exception{
+        H h=new H();h.token();h.params.put("enrollmentIds","intern@example.com");
+        EnrollmentLookupService lookup=new EnrollmentLookupService(){
+            @Override public int activeByEmail(User actor,String email,Integer program){
+                assertEquals(3,actor.getUserId());assertEquals("intern@example.com",email);assertEquals(1,program);return 1;
+            }
+        };
+        new MeetingServlet(h.service,lookup).doPost(h.req,h.res);assertEquals(201,h.status);assertTrue(h.called);
+    }
+    @Test void emailWithoutEnrollmentDoesNotCreateMeeting()throws Exception{
+        H h=new H();h.token();h.params.put("enrollmentIds","unknown@example.com");
+        EnrollmentLookupService lookup=new EnrollmentLookupService(){
+            @Override public int activeByEmail(User actor,String email,Integer program){throw new ScheduleLeaveException(400,"VALIDATION_ERROR","No enrollment");}
+        };
+        new MeetingServlet(h.service,lookup).doPost(h.req,h.res);assertEquals(400,h.status);assertFalse(h.called);
+    }
+
 }

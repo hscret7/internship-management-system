@@ -34,9 +34,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Đăng nhập - Internship Management System</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="${ctx}/assets/css/app.css?v=20261013-integration" rel="stylesheet">
+    <link href="${ctx}/assets/css/app.css?v=20261019-khanh-base" rel="stylesheet">
 </head>
 <body>
 
@@ -113,9 +116,22 @@
                 <div class="mb-3">
                     <label class="form-label" for="password">Mật khẩu <span class="req">*</span></label>
                     <%-- [GIẢ ĐỊNH 2] name="password" --%>
-                    <input type="password" id="password" name="password" class="form-control"
-                           required autocomplete="current-password"
-                           maxlength="100" placeholder="Nhập mật khẩu">
+                    <div class="position-relative">
+                        <input type="password" id="password" name="password" class="form-control pe-5"
+                               required autocomplete="current-password"
+                               maxlength="100" placeholder="Nhập mật khẩu">
+                        <button type="button" class="btn-toggle-password position-absolute end-0 top-50 translate-middle-y me-2 border-0 bg-transparent text-secondary p-1"
+                                tabindex="-1" title="Hiện/ẩn mật khẩu" aria-label="Hiện/ẩn mật khẩu"
+                                onclick="togglePasswordVisibility(this, event)"
+                                style="cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center;">
+                            <span class="pwd-toggle-icon" style="display: flex;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-brand w-100">
@@ -139,6 +155,6 @@
     </div>
 </div>
 
-<script src="${ctx}/assets/js/app.js?v=20261018-password"></script>
+<script src="${ctx}/assets/js/app.js?v=20261017-v3"></script>
 </body>
 </html>

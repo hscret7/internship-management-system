@@ -54,6 +54,7 @@ public class EvaluationDAO {
                 SELECT e.evaluation_id, e.enrollment_id, ip.profile_id AS intern_profile_id,
                        ip.full_name AS intern_name,
                        p.program_name, u.full_name AS mentor_name, e.score,
+                       e.skill_score, e.attitude_score,
                        e.comment, e.created_at, UNIX_TIMESTAMP(e.created_at) AS created_at_epoch
                 FROM evaluations e
                 JOIN program_enrollments pe ON pe.enrollment_id = e.enrollment_id
@@ -61,7 +62,6 @@ public class EvaluationDAO {
                 JOIN internship_programs p ON p.program_id = pe.program_id
                 JOIN mentors m ON m.mentor_id = e.mentor_id
                 JOIN users u ON u.user_id = m.user_id
-                WHERE e.score IS NOT NULL
                 ORDER BY e.created_at DESC, e.evaluation_id DESC
                 """;
         List<EvaluationSummary> summaries = new ArrayList<>();
@@ -69,13 +69,18 @@ public class EvaluationDAO {
              ResultSet rows = statement.executeQuery()) {
             while (rows.next()) {
                 java.time.LocalDateTime createdAt = com.internship.util.SqlTime.utcLocal(rows, "created_at");
+                Integer skillScore = rows.getObject("skill_score") != null ? rows.getInt("skill_score") : null;
+                Integer attitudeScore = rows.getObject("attitude_score") != null ? rows.getInt("attitude_score") : null;
+                BigDecimal score = rows.getBigDecimal("score");
                 summaries.add(new EvaluationSummary(
                         rows.getLong("evaluation_id"), rows.getInt("enrollment_id"),
                         rows.getString("intern_name"), rows.getString("program_name"),
-                        rows.getString("mentor_name"), rows.getBigDecimal("score"),
+                        rows.getString("mentor_name"), score,
                         rows.getString("comment"),
                         createdAt == null ? null : createdAt,
-                        rows.getInt("intern_profile_id")));
+                        rows.getInt("intern_profile_id"),
+                        skillScore,
+                        attitudeScore));
             }
         }
         return summaries;

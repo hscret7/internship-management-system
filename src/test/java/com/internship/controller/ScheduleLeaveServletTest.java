@@ -151,4 +151,38 @@ class ScheduleLeaveServletTest {
         servlet.doGet(request,response);assertEquals(403,status);
     }
 
+
+    @Test void internDirectoryActionOnOwnRouteIsForbiddenBeforeLookup()throws Exception{
+        login("INTERN");parameters.put("action","interns");servlet.doGet(request,response);
+        assertEquals(403,status);assertFalse(called);
+    }
+    @Test void hrDirectoryUsesSharedDataEnvelopeAndOmitsPhone()throws Exception{
+        servlet=new ScheduleLeaveServlet(new ScheduleLeaveService(),new EnrollmentLookupService(){
+            @Override public List<ScheduleEnrollmentDAO.InternDetail> internDirectory(User actor){
+                return List.of(new ScheduleEnrollmentDAO.InternDetail(1,"a@b.com","<script>","Uni","Major","private-phone","Program",2,"ACTIVE"));
+            }
+        });
+        login("HR");route="/api/hr/work-schedules";parameters.clear();parameters.put("action","interns");
+        servlet.doGet(request,response);assertEquals(200,status);
+        assertTrue(body.toString().contains("\"data\":["));assertFalse(body.toString().contains("<script>"));
+        assertFalse(body.toString().contains("private-phone"));
+    }
+    @Test void hrDirectoryFailureIs503NotEmptySuccess()throws Exception{
+        servlet=new ScheduleLeaveServlet(new ScheduleLeaveService(),new EnrollmentLookupService(){
+            @Override public List<ScheduleEnrollmentDAO.InternDetail> internDirectory(User actor)throws SQLException{throw new SQLException("private-sql");}
+        });
+        login("HR");route="/api/hr/work-schedules";parameters.put("action","interns");
+        servlet.doGet(request,response);assertEquals(503,status);assertFalse(body.toString().contains("private-sql"));
+    }
+    @Test void scheduleEmailAndSelectedIdMustIdentifySameEnrollment()throws Exception{
+        servlet=new ScheduleLeaveServlet(new ScheduleLeaveService(),new EnrollmentLookupService(){
+            @Override public List<ScheduleEnrollmentDAO.Choice> lookup(User actor,String email){
+                return List.of(new ScheduleEnrollmentDAO.Choice(2,10,"Other","ACTIVE","ACTIVE","Other",email));
+            }
+        });
+        login("HR");route="/api/hr/work-schedules";parameters.put("action","create");
+        parameters.put("csrfToken",CsrfToken.expose(request));parameters.put("enrollmentId","1");parameters.put("internEmail","a@b.com");
+        servlet.doPost(request,response);assertEquals(400,status);assertTrue(body.toString().contains("VALIDATION_ERROR"));
+    }
+
 }

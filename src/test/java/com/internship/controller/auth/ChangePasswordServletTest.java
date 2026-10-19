@@ -24,6 +24,8 @@ class ChangePasswordServletTest {
     }
     static class Http {
         Map<String,Object> sessionAttributes=new HashMap<>(),requestAttributes=new HashMap<>();
+        java.io.StringWriter body=new java.io.StringWriter();
+        boolean jsonRequest;
         Map<String,String> params=new HashMap<>(); boolean sessionExists=true, invalidated;int status;String redirect,view;
         final HttpSession session=(HttpSession)Proxy.newProxyInstance(HttpSession.class.getClassLoader(),new Class[]{HttpSession.class},(p,m,a)->switch(m.getName()){
             case "getAttribute"->sessionAttributes.get(a[0]);
@@ -35,12 +37,14 @@ class ChangePasswordServletTest {
         final HttpServletRequest request=(HttpServletRequest)Proxy.newProxyInstance(HttpServletRequest.class.getClassLoader(),new Class[]{HttpServletRequest.class},(p,m,a)->switch(m.getName()){
             case "getSession"->sessionExists?session:null;
             case "getParameter"->params.get(a[0]);
+            case "getHeader"->jsonRequest && "X-Requested-With".equals(a[0])?"XMLHttpRequest":null;
             case "getContextPath"->"/test";
             case "setAttribute"->{requestAttributes.put((String)a[0],a[1]);yield null;}
             case "getRequestDispatcher"->{view=(String)a[0];yield dispatcher;}
             default->null;
         });
         final HttpServletResponse response=(HttpServletResponse)Proxy.newProxyInstance(HttpServletResponse.class.getClassLoader(),new Class[]{HttpServletResponse.class},(p,m,a)->switch(m.getName()){
+            case "getWriter"->new java.io.PrintWriter(body);
             case "sendError","setStatus"->{status=(int)a[0];yield null;}
             case "sendRedirect"->{redirect=(String)a[0];yield null;}
             default->null;
@@ -71,4 +75,21 @@ class ChangePasswordServletTest {
         Http h=new Http();Users u=new Users();new ChangePasswordServlet(u).doGet(h.request,h.response);assertEquals("/WEB-INF/views/auth/change-password.jsp",h.view);assertEquals(0,u.calls);
         h.sessionExists=false;new ChangePasswordServlet(u).doGet(h.request,h.response);assertEquals("/test/auth/login",h.redirect);
     }
+
+    @Test void modalJsonSuccessInvalidatesSessionAndUsesSessionActor()throws Exception{
+        Http h=new Http();h.jsonRequest=true;h.token();h.params.put("userId","999");Users u=new Users();
+        new ChangePasswordServlet(u).doPost(h.request,h.response);
+        assertEquals(200,h.status);assertEquals(42,u.actor);assertTrue(h.invalidated);
+        assertNull(h.redirect);assertTrue(h.body.toString().contains("\"success\":true"));
+    }
+    @Test void modalJsonCsrfFailureNeverChangesPassword()throws Exception{
+        Http h=new Http();h.jsonRequest=true;Users u=new Users();new ChangePasswordServlet(u).doPost(h.request,h.response);
+        assertEquals(403,h.status);assertEquals(0,u.calls);assertTrue(h.body.toString().contains("\"success\":false"));
+    }
+    @Test void modalJsonSqlFailureDoesNotExposeSqlOrInvalidateSession()throws Exception{
+        Http h=new Http();h.jsonRequest=true;h.token();Users u=new Users();u.dbFailure=true;
+        new ChangePasswordServlet(u).doPost(h.request,h.response);
+        assertEquals(503,h.status);assertFalse(h.invalidated);assertFalse(h.body.toString().contains("SECRET"));
+    }
+
 }

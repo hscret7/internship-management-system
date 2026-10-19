@@ -13,12 +13,20 @@ public record EvaluationSummary(
         BigDecimal score,
         String comment,
         LocalDateTime createdAt,
-        Integer internProfileId) {
+        Integer internProfileId,
+        Integer skillScore,
+        Integer attitudeScore) {
     /** Retain source compatibility for older consumers of this list item. */
+    public EvaluationSummary(long evaluationId, int enrollmentId, String internName,
+                             String programName, String mentorName, BigDecimal score,
+                             String comment, LocalDateTime createdAt, Integer internProfileId) {
+        this(evaluationId, enrollmentId, internName, programName, mentorName,
+                score, comment, createdAt, internProfileId, null, null);
+    }
     public EvaluationSummary(long evaluationId, int enrollmentId, String internName,
                              String programName, String mentorName, BigDecimal score,
                              String comment, LocalDateTime createdAt) {
         this(evaluationId, enrollmentId, internName, programName, mentorName,
-                score, comment, createdAt, null);
+                score, comment, createdAt, null, null, null);
     }
 }

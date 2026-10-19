@@ -24,7 +24,7 @@ public class InAppNotificationDAO {
         }
     }
     public boolean active(Connection c,long actor) throws SQLException {
-        try (PreparedStatement s=c.prepareStatement("SELECT user_id FROM users WHERE user_id=? AND status='ACTIVE' FOR SHARE")) {
+        try (PreparedStatement s=c.prepareStatement("SELECT user_id FROM users WHERE user_id=? AND status='ACTIVE' LOCK IN SHARE MODE")) {
             s.setLong(1,actor); try(ResultSet r=s.executeQuery()) {return r.next();}
         }
     }

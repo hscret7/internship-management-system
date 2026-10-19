@@ -20,7 +20,7 @@ public class MeetingInboxDAO implements MeetingNotifications {
                 SELECT u.user_id FROM program_enrollments e
                 JOIN intern_profiles ip ON ip.profile_id=e.intern_profile_id
                 JOIN users u ON u.user_id=ip.user_id
-                WHERE e.enrollment_id=? AND e.program_id=? AND u.status='ACTIVE' FOR SHARE
+                WHERE e.enrollment_id=? AND e.program_id=? AND u.status='ACTIVE' LOCK IN SHARE MODE
                 """)) {
                 s.setInt(1,enrollment);s.setInt(2,m.programId());
                 try(ResultSet r=s.executeQuery()){while(r.next())ids.put(r.getLong(1),"");}

@@ -319,31 +319,192 @@
         });
     }
 
-    function assessmentCard(result, index) {
-        var panel = node('article', null, 'fe3-feedback border rounded p-3 mb-3');
-        var heading = node('div', null, 'd-flex flex-wrap justify-content-between gap-2 mb-2');
-        heading.appendChild(node('strong', 'Mentor: ' + (result.mentorName || '—')));
-        heading.appendChild(node('span', (index === 0 ? 'Mới nhất · ' : '') + moment(result.createdAt), 'text-muted'));
-        panel.appendChild(heading);
-        var scores = node('div', null, 'row g-2 mb-3');
-        [['Kỹ năng', result.skillsScore], ['Thái độ', result.attitudeScore]].forEach(function (criterion) {
-            var box = node('div', null, 'col-sm-6');
-            var detail = node('div', null, 'border rounded p-2');
-            detail.appendChild(node('span', criterion[0], 'd-block text-muted'));
-            detail.appendChild(node('strong', criterion[1] + ' / 5', 'fs-5'));
-            box.appendChild(detail); scores.appendChild(box);
-        });
-        panel.appendChild(scores);
-        panel.appendChild(node('p', result.comment || 'Không có nhận xét.', 'fe3-report-content mb-0'));
-        return panel;
+    function gradeBadge(avg) {
+        if (avg >= 4.5) return { text: 'Xuất sắc', cls: 'badge bg-warning text-dark', icon: '', gpa: 'A' };
+        if (avg >= 3.8) return { text: 'Giỏi', cls: 'badge bg-success text-white', icon: '', gpa: 'B+' };
+        if (avg >= 3.0) return { text: 'Khá', cls: 'badge bg-primary text-white', icon: '', gpa: 'B' };
+        if (avg >= 2.0) return { text: 'Trung bình', cls: 'badge bg-secondary text-white', icon: '', gpa: 'C' };
+        return { text: 'Chưa đạt', cls: 'badge bg-danger text-white', icon: '', gpa: 'D' };
+    }
+
+    function renderAssessmentCard(result, entry, isLatest) {
+        var card = node('article', null, 'eval-card-history p-3 mb-3 border rounded shadow-sm bg-white');
+
+        var skills = Number(result.skillsScore) || 0;
+        var attitude = Number(result.attitudeScore) || 0;
+        var avg = (skills + attitude) / 2;
+        var score10 = (avg * 2).toFixed(1);
+        var grade = gradeBadge(avg);
+
+        // Try extracting structured metadata if present
+        var evalData = null;
+        var match = (result.comment || '').match(/<!--EVAL_DATA:([\s\S]*?)-->/);
+        if (match) {
+            try {
+                evalData = JSON.parse(match[1]);
+            } catch (e) {
+                evalData = null;
+            }
+        }
+
+        if (evalData && evalData.score10 != null) {
+            score10 = Number(evalData.score10).toFixed(1);
+            if (evalData.skillAvg != null && evalData.attitudeAvg != null) {
+                avg = (Number(evalData.skillAvg) + Number(evalData.attitudeAvg)) / 2;
+                grade = gradeBadge(avg);
+            }
+        }
+
+        // Header
+        var header = node('div', null, 'd-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom');
+        var meta = node('div');
+        if (isLatest) {
+            meta.appendChild(node('span', 'MỚI NHẤT', 'badge bg-success me-2'));
+        }
+        meta.appendChild(node('strong', 'Mentor: ' + (result.mentorName || 'Hướng dẫn')));
+        meta.appendChild(node('span', ' · ' + moment(result.createdAt), 'text-muted small ms-2'));
+        header.appendChild(meta);
+
+        var gradePill = node('span', grade.text, grade.cls + ' fs-6 px-3 py-1 rounded-pill');
+        header.appendChild(gradePill);
+        card.appendChild(header);
+
+        // Score summary
+        var grid = node('div', null, 'row g-2 mb-3 text-center');
+
+        var col1 = node('div', null, 'col-4');
+        var b1 = node('div', null, 'p-2 rounded bg-light border');
+        b1.appendChild(node('small', 'Kỹ năng chuyên môn', 'text-muted d-block small'));
+        var sLabel = (evalData && evalData.skillAvg != null) ? Number(evalData.skillAvg).toFixed(1) + ' / 5' : (skills + ' / 5');
+        b1.appendChild(node('strong', sLabel, 'text-primary fs-5'));
+        col1.appendChild(b1);
+        grid.appendChild(col1);
+
+        var col2 = node('div', null, 'col-4');
+        var b2 = node('div', null, 'p-2 rounded bg-light border');
+        b2.appendChild(node('small', 'Ý thức & Thái độ', 'text-muted d-block small'));
+        var aLabel = (evalData && evalData.attitudeAvg != null) ? Number(evalData.attitudeAvg).toFixed(1) + ' / 5' : (attitude + ' / 5');
+        b2.appendChild(node('strong', aLabel, 'text-success fs-5'));
+        col2.appendChild(b2);
+        grid.appendChild(col2);
+
+        var col3 = node('div', null, 'col-4');
+        var b3 = node('div', null, 'p-2 rounded bg-light border');
+        b3.appendChild(node('small', 'Điểm quy đổi (Hệ 10)', 'text-muted d-block small'));
+        b3.appendChild(node('strong', score10 + ' / 10.0', 'text-dark fs-5'));
+        col3.appendChild(b3);
+        grid.appendChild(col3);
+
+        card.appendChild(grid);
+
+        // Mentor genuine comment
+        var rawComment = (evalData && evalData.overallComment)
+            ? evalData.overallComment
+            : (result.comment || '')
+                .replace(/<!--EVAL_DATA:(.*?)-->/g, '')
+                .replace(/BẢNG ĐIỂM CHI TIẾT[\s\S]*/g, '')
+                .replace(/===.*?===[\s\S]*/g, '')
+                .replace(/^NHẬN XÉT CHUNG CỦA MENTOR:\s*/i, '')
+                .trim();
+
+        var commentBox = node('div', null, 'mt-2 p-3 rounded bg-light border-start border-3 border-primary');
+        commentBox.appendChild(node('div', 'Nhận xét chung của Mentor:', 'fw-bold small text-muted mb-1'));
+        commentBox.appendChild(node('p', rawComment || 'Không có nhận xét.', 'mb-0 fe3-report-content'));
+        card.appendChild(commentBox);
+
+        // Render detailed criteria tables if available
+        if (evalData && ((evalData.skills && evalData.skills.length) || (evalData.attitude && evalData.attitude.length))) {
+            var detailWrapper = node('div', null, 'mt-3 pt-3 border-top');
+
+            function scoreName(s) {
+                var val = Number(s);
+                if (val === 5) return '5/5 - Xuất sắc';
+                if (val === 4) return '4/5 - Khá';
+                if (val === 3) return '3/5 - Đạt';
+                if (val === 2) return '2/5 - Yếu';
+                return '1/5 - Chưa đạt';
+            }
+
+            function scoreBadgeClass(s) {
+                var val = Number(s);
+                if (val >= 5) return 'badge bg-success-subtle text-success border border-success-subtle';
+                if (val >= 4) return 'badge bg-primary-subtle text-primary border border-primary-subtle';
+                if (val >= 3) return 'badge bg-info-subtle text-info-emphasis border border-info-subtle';
+                if (val >= 2) return 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                return 'badge bg-danger-subtle text-danger border border-danger-subtle';
+            }
+
+            function renderCriteriaTable(title, items) {
+                if (!items || !items.length) return;
+                var sec = node('div', null, 'mb-3');
+                sec.appendChild(node('div', title, 'fw-bold small text-secondary mb-2'));
+                var tableDiv = node('div', null, 'table-responsive');
+                var table = node('table', null, 'table table-sm table-bordered align-middle bg-white mb-0');
+                var thead = node('thead', null, 'table-light small');
+                var thr = node('tr');
+                var th1 = node('th', 'Tiêu chí đánh giá');
+                th1.style.width = '42%';
+                thr.appendChild(th1);
+                var th2 = node('th', 'Mức điểm', 'text-center');
+                th2.style.width = '20%';
+                thr.appendChild(th2);
+                var th3 = node('th', 'Nhận xét chi tiết');
+                th3.style.width = '38%';
+                thr.appendChild(th3);
+                thead.appendChild(thr);
+                table.appendChild(thead);
+
+                var tbody = node('tbody', null, 'small');
+                items.forEach(function (it, idx) {
+                    var tr = node('tr');
+                    var tdName = node('td');
+                    tdName.appendChild(node('strong', (idx + 1) + '. ' + it.title, 'd-block text-dark'));
+                    if (it.desc) {
+                        tdName.appendChild(node('span', it.desc, 'text-muted d-block small'));
+                    }
+                    tr.appendChild(tdName);
+
+                    var tdScore = node('td', null, 'text-center');
+                    tdScore.appendChild(node('span', scoreName(it.score), scoreBadgeClass(it.score)));
+                    tr.appendChild(tdScore);
+
+                    var tdComm = node('td');
+                    if (it.comment && it.comment.trim()) {
+                        tdComm.appendChild(node('span', it.comment.trim(), 'text-dark fst-italic'));
+                    } else {
+                        tdComm.appendChild(node('span', '—', 'text-muted'));
+                    }
+                    tr.appendChild(tdComm);
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                tableDiv.appendChild(table);
+                sec.appendChild(tableDiv);
+                detailWrapper.appendChild(sec);
+            }
+
+            renderCriteriaTable('I. Kỹ năng chuyên môn & Năng lực thực hiện (8 tiêu chí)', evalData.skills);
+            renderCriteriaTable('II. Ý thức kỷ luật & Thái độ làm việc (5 tiêu chí)', evalData.attitude);
+            card.appendChild(detailWrapper);
+        }
+
+        return card;
     }
 
     function showEvaluation(result, target) {
         target.replaceChildren();
-        if (!result) { target.appendChild(node('p', 'Chưa có đánh giá thang 100.')); return; }
-        target.appendChild(node('h2', 'Kết quả: ' + result.score + '/100', 'h5'));
-        target.appendChild(node('p', 'Ngày đánh giá: ' + moment(result.createdAt), 'text-muted'));
-        target.appendChild(node('p', result.comment || 'Không có nhận xét.', 'fe3-report-content'));
+        if (!result) { target.appendChild(node('p', 'Chưa có đánh giá cuối kỳ.')); return; }
+        var scoreVal = Number(result.score) || 0;
+        var avg5 = scoreVal / 20;
+        var grade = gradeBadge(avg5);
+        var box = node('div', null, 'p-3 rounded bg-white border');
+        var head = node('div', null, 'd-flex justify-content-between align-items-center mb-2');
+        head.appendChild(node('h4', 'Kết quả: ' + scoreVal + ' / 100', 'h5 mb-0 fw-bold text-primary'));
+        head.appendChild(node('span', grade.text, grade.cls + ' fs-6 px-3 py-1 rounded-pill'));
+        box.appendChild(head);
+        box.appendChild(node('p', 'Ngày đánh giá: ' + moment(result.createdAt), 'text-muted small mb-2'));
+        box.appendChild(node('p', result.comment || 'Không có nhận xét.', 'fe3-report-content mb-0 p-2 bg-light rounded'));
+        target.appendChild(box);
     }
 
     async function evaluationPage(mentor) {
@@ -353,17 +514,69 @@
             if (form) form.classList.add('d-none');
             var target = byId('evaluationResult');
             if (!entry) { target.textContent = 'Chưa có đợt thực tập.'; return; }
-            target.replaceChildren(node('p', 'Đang tải đánh giá…'));
             var results = await Promise.all([api('/assessments', { enrollmentId: entry.enrollmentId }), api('/evaluation', { enrollmentId: entry.enrollmentId })]);
-            if (!currentEnrollment() || currentEnrollment().enrollmentId !== entry.enrollmentId) return;
-            target.replaceChildren(node('h2', 'Lịch sử đánh giá hai tiêu chí', 'h5'));
-            target.appendChild(node('p', 'Kỹ năng và thái độ được lưu riêng trên thang 1–5; không tự quy đổi điểm, xếp loại hoặc xác nhận hoàn thành.', 'text-muted'));
-            target.appendChild(node('p', results[0].length + ' bản ghi đánh giá', 'fw-semibold'));
-            if (!results[0].length) target.appendChild(node('p', 'Chưa có đánh giá hai tiêu chí.'));
-            results[0].forEach(function (result, index) {
-                target.appendChild(assessmentCard(result, index));
-            });
-            if (results[1]) { var legacy=node('section', null, 'fe3-feedback'); legacy.appendChild(node('h3', 'Đánh giá cũ (thang 100, không quy đổi)', 'h6'));var body=node('div');showEvaluation(results[1], body);legacy.appendChild(body);target.appendChild(legacy); }
+            target.replaceChildren();
+
+            var headerDiv = node('div', null, 'd-flex flex-wrap justify-content-between align-items-center mb-3 gap-2');
+            headerDiv.appendChild(node('h3', 'Lịch sử & Kết quả đánh giá', 'h5 fw-bold mb-0'));
+
+            var rightTools = node('div', null, 'd-flex align-items-center gap-2');
+            if (results[0].length) {
+                rightTools.appendChild(node('span', results[0].length + ' bản ghi đánh giá', 'badge bg-primary-subtle text-primary border'));
+                if (!mentor && entry.status === 'COMPLETED' && typeof window.showInternCertificate === 'function') {
+                    var latest = results[0][0];
+                    var evalData = null;
+                    var match = (latest.comment || '').match(/<!--EVAL_DATA:([\s\S]*?)-->/);
+                    if (match) {
+                        try { evalData = JSON.parse(match[1]); } catch (e) { evalData = null; }
+                    }
+                    var s10 = (evalData && evalData.score10 != null)
+                        ? Number(evalData.score10).toFixed(1)
+                        : (((Number(latest.skillsScore) + Number(latest.attitudeScore)) / 2) * 2).toFixed(1);
+                    var g = gradeBadge((Number(latest.skillsScore) + Number(latest.attitudeScore)) / 2);
+
+                    var certBtn = node('button', null, 'btn btn-outline-success btn-sm');
+                    certBtn.type = 'button';
+                    certBtn.innerHTML = '<i class="bi bi-award me-1"></i> Giấy chứng nhận';
+                    certBtn.addEventListener('click', function () {
+                        window.showInternCertificate({
+                            internName: entry.internName,
+                            programName: entry.programName,
+                            dates: date(entry.startDate) + ' – ' + date(entry.endDate),
+                            score10: s10,
+                            grade: g.text,
+                            mentorName: latest.mentorName
+                        });
+                    });
+                    rightTools.appendChild(certBtn);
+                }
+            }
+            headerDiv.appendChild(rightTools);
+            target.appendChild(headerDiv);
+
+            if (!results[0].length && !results[1]) {
+                target.appendChild(node('div', 'Chưa có đánh giá nào cho đợt thực tập này.', 'alert alert-info'));
+            } else {
+                results[0].forEach(function (result, index) {
+                    target.appendChild(renderAssessmentCard(result, entry, index === 0));
+                });
+            }
+
+            if (results[1] && !results[0].length) {
+                var legacy = node('section', null, 'fe3-feedback mt-3 p-3 border rounded bg-light');
+                legacy.appendChild(node('h4', 'Đánh giá thang 100 (Hệ thống cũ)', 'h6 fw-bold text-muted mb-2'));
+                var body = node('div');
+                showEvaluation(results[1], body);
+                legacy.appendChild(body);
+                target.appendChild(legacy);
+            }
+
+            var statusBadge = byId('activeStatusBadge');
+            if (statusBadge) {
+                statusBadge.textContent = entry.status === 'ACTIVE' ? 'Đang thực tập (Có thể đánh giá)' : status(entry.status);
+                statusBadge.className = 'badge ' + (entry.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary');
+            }
+
             if (form && entry.status === 'ACTIVE') form.classList.remove('d-none');
         }
         await loadEnrollments(reload);
@@ -373,12 +586,21 @@
                 submitting(event.currentTarget, async function () {
                     var entry = requireEnrollment();
                     if (entry.status !== 'ACTIVE') throw new Error('Chỉ đánh giá đợt đang tham gia.');
-                    var values = formValues(byId('evaluationForm'));
-                    if (!values.comment.trim()) throw new Error('Cần nhập nhận xét.');
+                    var payload = (typeof window.buildEvaluationPayload === 'function')
+                        ? window.buildEvaluationPayload(entry.enrollmentId)
+                        : formValues(byId('evaluationForm'));
+                    if (!payload.comment || !payload.comment.trim()) throw new Error('Cần nhập nhận xét.');
+                    if (payload.comment.length>10000) throw new Error('Nhận xét và bảng tiêu chí vượt 10.000 ký tự. Vui lòng rút gọn nội dung.');
                     await api('/assessments', null, {
-                        enrollmentId: entry.enrollmentId, skillsScore: values.skillsScore, attitudeScore: values.attitudeScore, comment: values.comment
+                        enrollmentId: entry.enrollmentId,
+                        skillsScore: payload.skillsScore,
+                        attitudeScore: payload.attitudeScore,
+                        comment: payload.comment.trim()
                     });
-                    notice('Đã lưu đánh giá cuối kỳ.', 'success');
+                    notice('Đã lưu đánh giá kết quả thực tập thành công.', 'success');
+                    if (typeof window.resetEvaluationForm === 'function') {
+                        window.resetEvaluationForm();
+                    }
                     await reload();
                 });
             });
@@ -607,10 +829,16 @@
         renderRanks('mentorStats', data.activeInternsByMentor, 'Chưa có TTS được phân mentor.');
     }
 
+    function summaryDisplayScore100(entry) {
+        if(Number.isInteger(entry.skillScore) && Number.isInteger(entry.attitudeScore))
+            return (entry.skillScore+entry.attitudeScore)*10;
+        return entry.score===null || entry.score===undefined?NaN:Number(entry.score);
+    }
+
     async function hrEvaluations() {
         var entries = await api('/evaluations');
         var search = byId('evaluationSearch');
-        var scored = entries.map(function (entry) { return Number(entry.score); })
+        var scored = entries.map(summaryDisplayScore100)
             .filter(function (score) { return Number.isFinite(score); });
         byId('metricEvaluationCount').textContent = entries.length;
         var profileIds = entries.map(function (entry) { return entry.internProfileId; });
@@ -642,15 +870,41 @@
                 var row = node('tr');
                 var intern = node('td');
                 intern.appendChild(node('strong', entry.internName || '—'));
-                intern.appendChild(node('small', 'Đợt #' + entry.enrollmentId, 'fe3-table-meta'));
+                intern.appendChild(node('small', 'Đợt #' + entry.enrollmentId, 'fe3-table-meta d-block text-muted'));
                 row.appendChild(intern);
                 cell(row, entry.programName);
                 cell(row, entry.mentorName);
-                var score = node('td');
-                score.appendChild(node('span', entry.score + '/100', 'fe3-score'));
-                row.appendChild(score);
+
+                var scoreTd = node('td');
+                var scoreVal = Number(entry.score) || 0;
+                var avg5 = (entry.skillScore && entry.attitudeScore)
+                    ? ((entry.skillScore + entry.attitudeScore) / 2)
+                    : (scoreVal / 20);
+                var grade = gradeBadge(avg5);
+
+                var scoreBadge = node('div', null, 'd-flex flex-column align-items-start gap-1');
+                scoreBadge.appendChild(node('span', grade.text, grade.cls + ' rounded-pill px-2 py-0 small'));
+                if (entry.skillScore && entry.attitudeScore) {
+                    scoreBadge.appendChild(node('span', 'KN: ' + entry.skillScore + '/5 · TĐ: ' + entry.attitudeScore + '/5', 'small text-muted'));
+                    scoreBadge.appendChild(node('strong', (avg5 * 2).toFixed(1) + ' / 10.0', 'text-primary small'));
+                } else {
+                    scoreBadge.appendChild(node('strong', scoreVal + ' / 100đ', 'fe3-score small'));
+                }
+                scoreTd.appendChild(scoreBadge);
+                row.appendChild(scoreTd);
+
                 cell(row, moment(entry.createdAt));
-                cell(row, entry.comment || 'Không có nhận xét.');
+
+                var commentTd = node('td');
+                var commentText = (entry.comment || 'Không có nhận xét.')
+                    .replace(/<!--EVAL_DATA:(.*?)-->/g, '')
+                    .replace(/BẢNG ĐIỂM CHI TIẾT[\s\S]*/g, '')
+                    .replace(/===.*?===[\s\S]*/g, '')
+                    .replace(/^NHẬN XÉT CHUNG CỦA MENTOR:\s*/i, '')
+                    .trim();
+                commentTd.appendChild(node('span', commentText || 'Không có nhận xét.', 'small'));
+                row.appendChild(commentTd);
+
                 body.appendChild(row);
             });
         }

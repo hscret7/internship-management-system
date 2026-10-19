@@ -40,14 +40,14 @@ public class AllowanceServlet extends HttpServlet {
         User currentUser = (User) session.getAttribute("currentUser");
 
         String path = req.getServletPath();
-        
+
         try {
             String enrollParam = req.getParameter("enrollmentId");
             Integer enrollmentId = null;
             try {
                 enrollmentId = (enrollParam != null && !enrollParam.trim().isEmpty()) ? Integer.parseInt(enrollParam) : null;
             } catch (NumberFormatException e) { }
-            
+
             List<Allowance> list = allowanceService.getAllowances(currentUser, enrollmentId);
             req.setAttribute("allowances", list);
 
@@ -57,8 +57,8 @@ public class AllowanceServlet extends HttpServlet {
                 req.getRequestDispatcher("/WEB-INF/views/hr/allowances.jsp").forward(req, resp);
             }
         } catch (SQLException | IllegalArgumentException e) {
-            req.setAttribute("error", e.getMessage());
-            req.getRequestDispatcher("/error/500.jsp").forward(req, resp);
+            log("Allowance lookup failed",e);
+            resp.sendError(e instanceof SQLException?503:400,"Không thể tải phụ cấp. Kiểm tra bộ lọc hoặc thử lại sau.");
         }
     }
 
@@ -88,7 +88,7 @@ public class AllowanceServlet extends HttpServlet {
                     }
                     a.setAllowanceType(req.getParameter("allowanceType"));
                     a.setPeriod(req.getParameter("period"));
-                    
+
                     allowanceService.createAllowance(currentUser, a);
                     resp.sendRedirect(req.getContextPath() + "/hr/allowances?success=true");
                 } else if ("update_status".equals(action)) {
@@ -109,7 +109,7 @@ public class AllowanceServlet extends HttpServlet {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Not allowed.");
             }
         } catch (Exception e) {
-            resp.sendRedirect(req.getContextPath() + "/hr/allowances?error=" + java.net.URLEncoder.encode(e.getMessage() != null ? e.getMessage() : "Error", "UTF-8"));
+            resp.sendRedirect(req.getContextPath() + "/hr/allowances?error=" + java.net.URLEncoder.encode(e instanceof SQLException ? "Không thể cập nhật phụ cấp lúc này." : "Dữ liệu phụ cấp không hợp lệ.", "UTF-8"));
         }
     }
 }
