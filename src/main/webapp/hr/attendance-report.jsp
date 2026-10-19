@@ -25,27 +25,11 @@
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
 
 <div class="container-fluid py-4">
-    <section class="card card-body mb-3" data-attendance-tools data-context="${ctx}"
-             data-form="f" data-enrollment="fEnroll" data-program="fProgram" aria-label="Tra cứu ghi danh và xuất báo cáo">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-5"><label class="form-label" for="reportLookupEmail">Email thực tập sinh</label>
-                <input id="reportLookupEmail" data-lookup-email class="form-control" type="email" maxlength="254" placeholder="Nhập email đầy đủ" autocomplete="off"></div>
-            <div class="col-md-2"><button type="button" data-lookup-button class="btn btn-outline-primary">Tra cứu</button></div>
-            <div class="col-md-5"><label class="form-label" for="reportLookupChoices">Ghi danh phù hợp</label>
-                <select id="reportLookupChoices" data-lookup-choices class="form-select" disabled><option value="">Chọn ghi danh sau khi tra cứu</option></select></div>
-        </div>
-        <p class="form-text">Một email có thể có nhiều ghi danh. Chọn đúng chương trình để điền mã vào bộ lọc; có thể nhập mã trực tiếp.</p>
-        <div class="d-flex flex-wrap gap-2"><button type="button" data-attendance-export="xlsx" class="btn btn-outline-primary">Xuất Excel</button>
-            <button type="button" data-attendance-export="pdf" class="btn btn-outline-primary">Xuất PDF</button></div>
-        <p class="form-text mb-0">Xuất theo bộ lọc đang nhập, tối đa 366 ngày tính cả hai đầu. File gồm mọi trạng thái và một dòng cho mỗi ca làm. PDF cần cấu hình font tiếng Việt trên máy chủ.</p>
-        <div data-report-message role="status" aria-live="polite" hidden></div>
-    </section>
-
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h2 class="h4 mb-1">Báo cáo chuyên cần</h2>
-            <p class="text-muted mb-0">Theo dõi đi làm, nghỉ phép, vắng và thiếu check-out. Mỗi dòng là một ca làm; không cộng giờ giữa các ca có cùng lần chấm công.</p>
+            <p class="text-muted mb-0">Theo dõi đi làm, nghỉ phép, vắng và thiếu check-out.</p>
         </div>
         <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/hr/attendance">
             Xem dạng bảng
@@ -67,8 +51,9 @@
                 <input class="form-control" id="fProgram" name="programId" type="number" min="1">
             </div>
             <div class="col-sm-6 col-lg-2">
-                <label class="form-label" for="fEnroll">Mã ghi danh</label>
-                <input class="form-control" id="fEnroll" name="enrollmentId" type="number" min="1">
+                <label class="form-label" for="fEnroll">Gmail / Mã ghi danh</label>
+                <input class="form-control" id="fEnroll" name="enrollmentId" type="text" list="enrollList" placeholder="Gmail hoặc mã">
+                <datalist id="enrollList"></datalist>
             </div>
             <div class="col-sm-6 col-lg-2">
                 <label class="form-label" for="fStatus">Trạng thái</label>
@@ -89,6 +74,7 @@
         <div class="form-text mt-2">
             Khoảng tra cứu tối đa 367 ngày mỗi lần.
         </div>
+        <div class="d-flex gap-2 mt-3"><button type="button" class="btn btn-outline-success" data-export-format="xlsx">Xuất Excel</button><button type="button" class="btn btn-outline-danger" data-export-format="pdf">Xuất PDF</button></div>
     </form>
 
     <div id="err" class="alert alert-danger d-none" role="alert"></div>
@@ -101,7 +87,6 @@
                         <th>Ngày</th>
                         <th>Thực tập sinh</th>
                         <th>Chương trình</th>
-                        <th>Ca làm</th>
                         <th>Check-in</th>
                         <th>Check-out</th>
                         <th>Giờ làm</th>
@@ -135,13 +120,14 @@
             .replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
         let loaded = [];
+        let internEmailMap = {};
 
         function paint() {
             const want = statusSelect.value;
             const shown = want ? loaded.filter((x) => x.status === want) : loaded;
 
             if (!shown.length) {
-                rows.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5">'
+                rows.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">'
                     + (loaded.length ? 'Không có dòng nào khớp bộ lọc trạng thái.'
                                      : 'Không có dữ liệu chấm công trong khoảng đã chọn.')
                     + '</td></tr>';
@@ -153,12 +139,15 @@
                 const out = x.status === 'MISSING_CHECKOUT'
                     ? '<b class="text-danger">Chưa check-out</b>'
                     : esc(x.checkOutTime);
+                const email = internEmailMap[x.enrollmentId];
+                const subText = email
+                    ? '<i class="bi bi-envelope me-1"></i>' + esc(email)
+                    : ('Ghi danh #' + esc(x.enrollmentId));
                 return '<tr>'
                     + '<td>' + esc(x.workDate) + '</td>'
                     + '<td><b>' + esc(x.internName) + '</b>'
-                        + '<div class="small text-muted">Ghi danh #' + esc(x.enrollmentId) + '</div></td>'
+                        + '<div class="small text-muted">' + subText + '</div></td>'
                     + '<td>' + esc(x.programName) + '</td>'
-                    + '<td>' + esc(x.startTime) + ' – ' + esc(x.endTime) + '</td>'
                     + '<td>' + esc(x.checkInTime) + '</td>'
                     + '<td>' + out + '</td>'
                     + '<td>' + Number(x.workedHours || 0).toFixed(2) + '</td>'
@@ -176,6 +165,8 @@
 
         async function load() {
             const params = new URLSearchParams(new FormData(form));
+            const identity=(params.get('enrollmentId')||'').trim();
+            if(identity.includes('@')) {params.delete('enrollmentId');params.set('email',identity);}
             params.delete('status');        // BE khong loc theo trang thai, loc o client
             params.set('format', 'json');   // duong thu nhat trong handoff FE2
 
@@ -194,8 +185,7 @@
                 if (!res.ok) {
                     throw new Error(body && body.error ? body.error : ('Lỗi HTTP ' + res.status));
                 }
-                if (!Array.isArray(body)) throw new Error('Dữ liệu báo cáo trả về không hợp lệ.');
-                loaded = body;
+                loaded = Array.isArray(body) ? body : [];
                 err.classList.add('d-none');
                 paint();
             } catch (e) {
@@ -208,6 +198,38 @@
             load();
         });
         statusSelect.addEventListener('change', paint);
+        document.querySelectorAll('[data-export-format]').forEach(button=>button.addEventListener('click',async()=>{
+            button.disabled=true;
+            try {
+                if(!form.reportValidity())return;
+                const params=new URLSearchParams(new FormData(form));
+                const days=(Date.parse(params.get('to'))-Date.parse(params.get('from')))/86400000;
+                if(!Number.isFinite(days)||days<0||days>=366)throw Error('Khoảng xuất file phải từ 1 đến 366 ngày.');
+                if(params.get('status'))throw Error('Chọn trạng thái Tất cả trước khi xuất file.');
+                params.delete('status');
+                const identity=(params.get('enrollmentId')||'').trim();
+                if(identity.includes('@')) {
+                    const lookup=await fetch(ctx+'/api/hr/work-schedules?action=enrollments&email='+encodeURIComponent(identity),{credentials:'same-origin'});
+                    if(!lookup.ok||lookup.redirected||!(lookup.headers.get('content-type')||'').includes('application/json'))throw Error('Không thể xác định ghi danh theo email.');
+                    const body=await lookup.json();if(!body.success||!Array.isArray(body.data))throw Error('Không thể xác định ghi danh theo email.');
+                    const program=params.get('programId');
+                    const choices=body.data.filter(entry=>!program||String(entry.programId)===program);
+                    if(choices.length!==1)throw Error('Email có nhiều hoặc chưa có ghi danh phù hợp. Chọn mã ghi danh/chương trình cụ thể trước khi xuất.');
+                    params.set('enrollmentId',String(choices[0].enrollmentId));
+                }
+                ['enrollmentId','programId'].forEach(name=>{const value=params.get(name);if(value&&!/^[1-9]\d*$/.test(value))throw Error('Mã chương trình và ghi danh phải là số nguyên dương.');});
+                const format=button.dataset.exportFormat;params.set('format',format);
+                const response=await fetch(ctx+'/hr/be4/attendance/export?'+params,{credentials:'same-origin'});
+                const type=response.headers.get('content-type')||'';
+                const expected=format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                if(!response.ok||response.redirected||!type.includes(expected))throw Error('Không thể xuất báo cáo. Kiểm tra phiên đăng nhập, dữ liệu và cấu hình PDF.');
+                const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');
+                link.href=url;link.download='bao-cao-chuyen-can.'+format;document.body.appendChild(link);link.click();link.remove();
+                setTimeout(()=>URL.revokeObjectURL(url),30000);err.classList.add('d-none');
+            } catch(error) {err.textContent=error.message;err.classList.remove('d-none');}
+            finally {button.disabled=false;}
+        }));
+
 
         // Mac dinh 30 ngay gan nhat, giong mac dinh cua AttendanceService.
         const iso = (d) => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -215,9 +237,33 @@
         document.getElementById('fFrom').value = iso(new Date(now.getTime() - 30 * 864e5));
         document.getElementById('fTo').value = iso(now);
 
+        // Load danh sach email thuc tap sinh
+        fetch(ctx + '/api/hr/work-schedules?action=interns')
+            .then((r) => r.json())
+            .then((data) => {
+                if (data && data.success && Array.isArray(data.data)) {
+                    const dl = document.getElementById('enrollList');
+                    if (dl) {
+                        dl.innerHTML = '';
+                        data.data.forEach((it) => {
+                            if (it.enrollmentId && it.email) {
+                                internEmailMap[it.enrollmentId] = it.email;
+                            }
+                            if (it.email) {
+                                const opt = document.createElement('option');
+                                opt.value = it.email;
+                                opt.label = (it.fullName || '') + (it.programName ? ' (' + it.programName + ')' : '');
+                                dl.appendChild(opt);
+                            }
+                        });
+                        paint();
+                    }
+                }
+            })
+            .catch(() => {});
+
         load();
     })();
 </script>
 
-<script src="${ctx}/assets/js/attendance-report-tools.js" defer></script>
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

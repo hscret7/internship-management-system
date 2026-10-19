@@ -36,4 +36,20 @@ public class EnrollmentLookupService {
         } else throw new ScheduleLeaveException(403, "FORBIDDEN", "Không có quyền truy cập.");
         try (Connection c = connections.getConnection()) { return dao.choices(owner, email, c); }
     }
+
+    /** HR-only metadata for the email cards; Intern routes never receive this directory. */
+    public List<ScheduleEnrollmentDAO.InternDetail> internDirectory(User actor) throws SQLException {
+        if (actor == null || actor.getStatus()!=UserStatus.ACTIVE || !UserRoleChecks.canManageHr(actor))
+            throw new ScheduleLeaveException(403,"FORBIDDEN","Chỉ HR/Admin được xem danh sách TTS.");
+        try(Connection c=connections.getConnection()) {return dao.listEnrolledInterns(c);}
+    }
+
+    public int activeByEmail(User actor, String email, Integer programId) throws SQLException {
+        var matches=lookup(actor,email).stream()
+                .filter(c -> "ACTIVE".equals(c.enrollmentStatus()) && "ACTIVE".equals(c.programStatus()))
+                .filter(c -> programId==null || c.programId()==programId).toList();
+        if(matches.size()!=1) throw new ScheduleLeaveException(400,"VALIDATION_ERROR",
+                matches.isEmpty()?"Email chưa có ghi danh đang hoạt động phù hợp.":"Email có nhiều ghi danh; hãy chọn đúng chương trình.");
+        return matches.get(0).enrollmentId();
+    }
 }

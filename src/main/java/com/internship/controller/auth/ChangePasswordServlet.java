@@ -34,23 +34,40 @@ public class ChangePasswordServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
         User user = actor(request);
-        if (user == null) { response.sendError(HttpServletResponse.SC_UNAUTHORIZED); return; }
-        if (!CsrfToken.valid(request)) { response.sendError(HttpServletResponse.SC_FORBIDDEN); return; }
+        boolean json="XMLHttpRequest".equals(request.getHeader("X-Requested-With"))
+                || (request.getHeader("Accept")!=null && request.getHeader("Accept").contains("application/json"));
+        if (user == null) { if(json) json(response,401,false,"Phiên đăng nhập đã hết hạn."); else response.sendError(401); return; }
+        if (!CsrfToken.valid(request)) { if(json) json(response,403,false,"Phiên biểu mẫu không hợp lệ."); else response.sendError(403); return; }
         try {
             users.changePassword(user.getUserId(), request.getParameter("currentPassword"),
                     request.getParameter("newPassword"), request.getParameter("confirmPassword"));
             request.getSession(false).invalidate();
+            if(json) {json(response,200,true,"Đổi mật khẩu thành công. Vui lòng đăng nhập lại.");return;}
             request.getSession(true).setAttribute("flashSuccess", "Đổi mật khẩu thành công. Vui lòng đăng nhập lại.");
             response.sendRedirect(request.getContextPath() + "/auth/login");
         } catch (IllegalArgumentException e) {
+            if(json) {json(response,400,false,e.getMessage());return;}
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             request.setAttribute("errorMessage", e.getMessage());
             doGet(request, response);
         } catch (SQLException e) {
+            if(json) {json(response,503,false,"Chưa thể đổi mật khẩu. Vui lòng thử lại sau.");return;}
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             request.setAttribute("errorMessage", "Chưa thể đổi mật khẩu. Vui lòng thử lại sau.");
             doGet(request, response);
         }
+    }
+
+    private static void json(HttpServletResponse response,int status,boolean success,String message) throws IOException {
+        response.setStatus(status);response.setContentType("application/json;charset=UTF-8");
+        StringBuilder quoted=new StringBuilder("\"");
+        for(char c:message.toCharArray()) {
+            if(c=='"' || c=='\\') quoted.append('\\').append(c);
+            else if(c<32 || c=='<' || c=='>' || c=='&') quoted.append(String.format("\\u%04x",(int)c));
+            else quoted.append(c);
+        }
+        quoted.append('"');
+        response.getWriter().write("{\"success\":"+success+",\""+(success?"message":"error")+"\":"+quoted+"}");
     }
 
     private User actor(HttpServletRequest request) {

@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 <%@ taglib uri="jakarta.tags.functions" prefix="fn" %>
@@ -8,7 +8,7 @@
 </jsp:include>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-cash-coin me-2"></i> Lịch sử phụ cấp (US26)</h2>
+    <h2><i class="bi bi-cash-coin me-2"></i> Lịch sử phụ cấp</h2>
 </div>
 
 <c:if test="${not empty param.error}">

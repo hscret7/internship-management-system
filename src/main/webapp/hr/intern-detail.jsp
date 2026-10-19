@@ -209,12 +209,12 @@
                     <ul class="nav nav-tabs border-bottom-0" id="docContractTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active fw-bold" style="color: #4e73df;" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab" aria-controls="docs" aria-selected="true">
-                                <i class="fas fa-file-alt me-1"></i>Duyệt tài liệu (US05)
+                                <i class="fas fa-file-alt me-1"></i>Duyệt tài liệu
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold text-success" id="contract-tab" data-bs-toggle="tab" data-bs-target="#contract" type="button" role="tab" aria-controls="contract" aria-selected="false">
-                                <i class="fas fa-file-signature me-1"></i>Hợp đồng (US09)
+                                <i class="fas fa-file-signature me-1"></i>Hợp đồng
                             </button>
                         </li>
                     </ul>

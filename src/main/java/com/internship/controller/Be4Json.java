@@ -80,6 +80,8 @@ final class Be4Json {
                 "programName", value.programName(),
                 "mentorName", value.mentorName(),
                 "score", value.score(),
+                "skillScore", value.skillScore(),
+                "attitudeScore", value.attitudeScore(),
                 "comment", value.comment(),
                 "createdAt", utc(value.createdAt()));
     }

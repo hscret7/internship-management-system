@@ -36,4 +36,11 @@ class ScheduleEnrollmentLookupDAOTest {
     @Test void unscopedQueryIsRejectedBeforeDatabase() {
         assertThrows(IllegalArgumentException.class,()->new ScheduleEnrollmentDAO().choices(null,null,null));
     }
+
+    @Test void directoryUsesRoleNameAndOnlyActiveUsers()throws Exception{
+        new ScheduleEnrollmentDAO().listEnrolledInterns(connection());
+        assertTrue(sql.contains("role.role_name='INTERN'"));assertTrue(sql.contains("u.status='ACTIVE'"));
+        assertFalse(sql.contains("u.role_id = 4"));
+    }
+
 }

@@ -14,8 +14,12 @@ import java.util.*;
 @WebServlet("/meetings")
 public class MeetingServlet extends HttpServlet {
     private final MeetingService meetings;
+    private final EnrollmentLookupService lookup;
     public MeetingServlet() { this(new MeetingService()); }
-    public MeetingServlet(MeetingService meetings) { this.meetings=Objects.requireNonNull(meetings); }
+    public MeetingServlet(MeetingService meetings) {this(meetings,new EnrollmentLookupService());}
+    public MeetingServlet(MeetingService meetings,EnrollmentLookupService lookup) {
+        this.meetings=Objects.requireNonNull(meetings);this.lookup=Objects.requireNonNull(lookup);
+    }
 
     @Override protected void doGet(HttpServletRequest req,HttpServletResponse res) throws IOException {
         headers(res);
@@ -35,7 +39,8 @@ public class MeetingServlet extends HttpServlet {
                         +",\"csrfToken\":"+quote(CsrfToken.expose(req))+"}";
             }
             res.getWriter().write(json);
-        } catch(MeetingService.NotFound e) {error(res,404,"Meeting unavailable");}
+        } catch(ScheduleLeaveException e) {error(res,e.status(),e.getMessage());}
+        catch(MeetingService.NotFound e) {error(res,404,"Meeting unavailable");}
         catch(IllegalArgumentException e) {error(res,400,"Invalid meeting request");}
         catch(SecurityException e) {error(res,403,"Meeting access denied");}
         catch(SQLException e) {error(res,503,"Meeting store unavailable");}
@@ -58,26 +63,32 @@ public class MeetingServlet extends HttpServlet {
         try {
             String action=text(req,"action");long id;
             if("create".equals(action)) {
-                id=meetings.create(actor.getUserId(),request(req));res.setStatus(201);
+                id=meetings.create(actor.getUserId(),request(req,actor));res.setStatus(201);
             } else if("update".equals(action)) {
                 id=Long.parseLong(text(req,"id"));
-                meetings.update(actor.getUserId(),id,number(req,"revision",0),request(req));
+                meetings.update(actor.getUserId(),id,number(req,"revision",0),request(req,actor));
             } else if("cancel".equals(action)) {
                 id=Long.parseLong(text(req,"id"));
                 meetings.cancel(actor.getUserId(),id,number(req,"revision",0));
             } else throw new IllegalArgumentException("Unknown action");
             res.getWriter().write("{\"id\":"+id+"}");
-        } catch(MeetingService.NotFound e) {error(res,404,"Meeting unavailable");}
+        } catch(ScheduleLeaveException e) {error(res,e.status(),e.getMessage());}
+        catch(MeetingService.NotFound e) {error(res,404,"Meeting unavailable");}
         catch(IllegalArgumentException e) {error(res,400,"Invalid meeting request");}
         catch(IllegalStateException e) {error(res,409,"Meeting changed or cancelled; reload first");}
         catch(SecurityException e) {error(res,403,"Meeting write denied");}
         catch(SQLException e) {error(res,503,"Meeting store unavailable");}
     }
 
-    private static MeetingRequest request(HttpServletRequest req) {
+    private MeetingRequest request(HttpServletRequest req,User actor) throws SQLException {
         String ids=text(req,"enrollmentIds");
         if(ids==null || ids.length()>2400)throw new IllegalArgumentException("Invalid participants");
-        List<Integer> participants=Arrays.stream(ids.split(",",-1)).map(String::trim).map(Integer::valueOf).toList();
+        List<Integer> participants=new ArrayList<>();
+        int program=number(req,"programId",0);
+        for(String token:ids.split(",",-1)) {
+            String value=token.trim();
+            participants.add(value.contains("@")?lookup.activeByEmail(actor,value,program):Integer.valueOf(value));
+        }
         return new MeetingRequest(number(req,"programId",0),text(req,"title"),text(req,"description"),
                 text(req,"location"),instant(req,"startsAt"),instant(req,"endsAt"),participants);
     }

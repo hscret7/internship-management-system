@@ -73,4 +73,42 @@ public class ScheduleEnrollmentDAO {
             }
         }
     }
+    public record InternDetail(int enrollmentId, String email, String fullName, String university,
+                              String major, String phone, String programName, Integer programId, String status) { }
+
+    public java.util.List<InternDetail> listEnrolledInterns(Connection connection) throws SQLException {
+        String sql = """
+                SELECT e.enrollment_id, COALESCE(u.email, ip.email) AS email,
+                       COALESCE(ip.full_name, u.full_name) AS full_name,
+                       ip.university, ip.major, ip.phone,
+                       p.program_name, p.program_id, e.status
+                FROM users u
+                LEFT JOIN intern_profiles ip ON ip.user_id = u.user_id
+                LEFT JOIN program_enrollments e ON e.intern_profile_id = ip.profile_id AND e.status = 'ACTIVE'
+                LEFT JOIN internship_programs p ON p.program_id = e.program_id
+                JOIN roles role ON role.role_id=u.role_id
+                WHERE role.role_name='INTERN' AND u.status='ACTIVE'
+                ORDER BY (e.enrollment_id IS NOT NULL) DESC, e.enrollment_id DESC, u.user_id ASC
+                """;
+        try (PreparedStatement s = connection.prepareStatement(sql);
+             ResultSet r = s.executeQuery()) {
+            java.util.List<InternDetail> list = new java.util.ArrayList<>();
+            while (r.next()) {
+                list.add(new InternDetail(
+                        r.getInt("enrollment_id"),
+                        r.getString("email"),
+                        r.getString("full_name"),
+                        r.getString("university"),
+                        r.getString("major"),
+                        r.getString("phone"),
+                        r.getString("program_name"),
+                        (Integer) r.getObject("program_id"),
+                        r.getString("status")
+                ));
+            }
+            return java.util.List.copyOf(list);
+        }
+    }
+
+
 }

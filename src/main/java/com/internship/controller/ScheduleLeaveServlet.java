@@ -53,6 +53,12 @@ public class ScheduleLeaveServlet extends HttpServlet {
                         .map(c -> Be4Json.fields("enrollmentId", c.enrollmentId(), "programId", c.programId(),
                                 "programName", c.programName(), "enrollmentStatus", c.enrollmentStatus(),
                                 "programStatus", c.programStatus(), "internName", c.internName(), "email", c.email())).toList();
+            } else if (!write && "interns".equals(request.getParameter("action"))) {
+                if(!hrRoute) throw new ScheduleLeaveException(403,"FORBIDDEN","Không có quyền xem danh sách TTS.");
+                data=lookup.internDirectory(actor).stream().map(i -> Be4Json.fields(
+                        "enrollmentId",i.enrollmentId()==0?null:i.enrollmentId(),"email",i.email(),
+                        "fullName",i.fullName(),"university",i.university(),"major",i.major(),
+                        "programName",i.programName(),"programId",i.programId(),"status",i.status())).toList();
             } else if (!write) {
                 Integer enrollment = optionalId(request, "enrollmentId"), program = optionalId(request, "programId");
                 LocalDate from = date(request, "from"), to = date(request, "to");
@@ -64,9 +70,9 @@ public class ScheduleLeaveServlet extends HttpServlet {
                 if (schedule) {
                     if (!hrRoute) throw new ScheduleLeaveException(403, "FORBIDDEN", "TTS chỉ được xem lịch.");
                     data = switch (action == null ? "" : action) {
-                        case "create" -> Be4Json.fields("scheduleId", service.createSchedule(actor, id(request, "enrollmentId"),
+                        case "create" -> Be4Json.fields("scheduleId", service.createSchedule(actor, resolveEnrollment(request,actor),
                                 date(request, "workDate"), time(request, "startTime"), time(request, "endTime"), request.getParameter("note")));
-                        case "bulk-create" -> service.createSchedules(actor, ids(request), date(request, "workDate"),
+                        case "bulk-create" -> service.createSchedules(actor, ids(request,actor), date(request, "workDate"),
                                 time(request, "startTime"), time(request, "endTime"), request.getParameter("note")).stream()
                                 .map(r -> Be4Json.fields("enrollmentId", r.enrollmentId(), "scheduleId", r.scheduleId(),
                                         "success", r.success(), "errorCode", r.errorCode())).toList();
@@ -142,9 +148,25 @@ public class ScheduleLeaveServlet extends HttpServlet {
     private static LocalTime time(HttpServletRequest r, String key) {
         String value = optional(r, key); if (value == null) throw invalid(); return LocalTime.parse(value);
     }
-    private static List<Integer> ids(HttpServletRequest r) {
-        String value = optional(r, "enrollmentIds"); if (value == null) throw invalid();
-        return Arrays.stream(value.split(",", -1)).map(String::trim).map(Integer::valueOf).toList();
+    private int resolveEnrollment(HttpServletRequest r,User actor) throws SQLException {
+        Integer selected=optionalId(r,"enrollmentId");String email=optional(r,"internEmail");
+        if(selected!=null) {
+            if(email!=null && lookup.lookup(actor,email).stream().noneMatch(c -> c.enrollmentId()==selected))
+                throw new ScheduleLeaveException(400,"VALIDATION_ERROR","Ghi danh không khớp email đã nhập.");
+            return selected;
+        }
+        if(email==null) throw invalid();
+        return lookup.activeByEmail(actor,email,optionalId(r,"programId"));
+    }
+    private List<Integer> ids(HttpServletRequest r, User actor) throws SQLException {
+        String value = optional(r, "enrollmentIds"); if (value == null || value.length()>26000) throw invalid();
+        String[] tokens=value.split(",",-1);if(tokens.length>100) throw invalid();
+        List<Integer> result=new ArrayList<>();
+        for(String token:tokens) {
+            String v=token.trim();if(v.isEmpty()) throw invalid();
+            result.add(v.contains("@")?lookup.activeByEmail(actor,v,optionalId(r,"programId")):Integer.valueOf(v));
+        }
+        return result;
     }
     private static ScheduleLeaveException invalid() {
         return new ScheduleLeaveException(400, "VALIDATION_ERROR", "Thiếu tham số hoặc hành động không hợp lệ.");

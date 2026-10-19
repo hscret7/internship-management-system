@@ -60,4 +60,18 @@ class EnrollmentLookupServiceTest {
     @Test void sqlFailureIsPropagatedNotConvertedToDummyEnrollment() {
         fail=true;assertThrows(SQLException.class,()->service.lookup(user("HR"),"intern@example.com"));
     }
+
+    @Test void emailResolutionRequiresExplicitProgramWhenMultipleActiveMatchesExist()throws Exception{
+        assertEquals(400,assertThrows(ScheduleLeaveException.class,
+                ()->service.activeByEmail(user("HR"),"intern@example.com",null)).status());
+        assertEquals(2,service.activeByEmail(user("HR"),"intern@example.com",20));
+        assertThrows(ScheduleLeaveException.class,()->service.activeByEmail(user("HR"),"intern@example.com",999));
+    }
+    @Test void internAndMentorCannotReadDirectoryWithoutOpeningConnection(){
+        assertThrows(ScheduleLeaveException.class,()->service.internDirectory(user("INTERN")));
+        assertThrows(ScheduleLeaveException.class,()->service.internDirectory(user("MENTOR")));
+        assertThrows(ScheduleLeaveException.class,()->service.internDirectory(null));
+        assertEquals(0,queries);
+    }
+
 }

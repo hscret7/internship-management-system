@@ -39,7 +39,7 @@ public class InternProfileServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
@@ -85,7 +85,7 @@ public class InternProfileServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
@@ -204,8 +204,7 @@ public class InternProfileServlet extends HttpServlet {
         int profileId = Integer.parseInt(idStr);
         InternProfile profile = profileService.getProfileById(profileId);
         if (profile == null) {
-            request.setAttribute("errorMessage", "Không tìm thấy hồ sơ ID: " + profileId);
-            request.getRequestDispatcher("/error/404.jsp").forward(request, response);
+            response.sendError(404,"Không tìm thấy hồ sơ thực tập sinh.");
             return;
         }
 

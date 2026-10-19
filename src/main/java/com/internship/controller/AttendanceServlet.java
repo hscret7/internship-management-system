@@ -49,14 +49,14 @@ public class AttendanceServlet extends HttpServlet {
         User currentUser = (User) session.getAttribute("currentUser");
 
         String path = req.getServletPath();
-        
+
         try {
             if ("/intern/attendance".equals(path)) {
                 if (!UserRoleChecks.isIntern(currentUser)) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
                     return;
                 }
-                
+
                 var choices = enrollmentLookup.lookup(currentUser, null);
                 req.setAttribute("enrollmentChoices", choices);
                 String enrollParam = req.getParameter("enrollmentId");
@@ -66,7 +66,7 @@ public class AttendanceServlet extends HttpServlet {
                 } catch (NumberFormatException e) {
                     // ignore, keep 0
                 }
-                
+
                 if (enrollmentId > 0) {
                     final int selected = enrollmentId;
                     if (choices.stream().noneMatch(c -> c.enrollmentId() == selected)) {
@@ -77,6 +77,14 @@ public class AttendanceServlet extends HttpServlet {
                     enrollmentId = choices.get(0).enrollmentId();
                 }
 
+                final int selectedEnrollment=enrollmentId;
+                var selectedChoice=choices.stream().filter(c -> c.enrollmentId()==selectedEnrollment).findFirst();
+                if(selectedChoice.isPresent()) {
+                    var c=selectedChoice.get();
+                    req.setAttribute("enrollmentDetails",Be4Json.fields("enrollmentId",c.enrollmentId(),
+                            "fullName",c.internName(),"email",c.email(),"programName",c.programName()));
+                }
+                req.setAttribute("internEmail",currentUser.getEmail());
                 LocalDate from = LocalDate.now().minusDays(30);
                 LocalDate to = LocalDate.now();
                 try {
@@ -89,32 +97,32 @@ public class AttendanceServlet extends HttpServlet {
                 } catch (Exception e) {
                     // use defaults
                 }
-                
+
                 List<AttendanceReportRow> report = attendanceService.getReport(currentUser, enrollmentId > 0 ? enrollmentId : null, null, from, to);
                 req.setAttribute("report", report);
                 req.setAttribute("from", from);
                 req.setAttribute("to", to);
                 req.setAttribute("enrollmentId", enrollmentId > 0 ? enrollmentId : null);
                 req.getRequestDispatcher("/WEB-INF/views/intern/attendance.jsp").forward(req, resp);
-                
+
             } else if ("/hr/attendance".equals(path)) {
                 if (!UserRoleChecks.canManageHr(currentUser)) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
                     return;
                 }
-                
+
                 String enrollParam = req.getParameter("enrollmentId");
                 Integer enrollmentId = null;
                 try {
                     enrollmentId = (enrollParam != null && !enrollParam.trim().isEmpty()) ? Integer.parseInt(enrollParam) : null;
                 } catch (NumberFormatException e) { }
-                
+
                 String progParam = req.getParameter("programId");
                 Integer programId = null;
                 try {
                     programId = (progParam != null && !progParam.trim().isEmpty()) ? Integer.parseInt(progParam) : null;
                 } catch (NumberFormatException e) { }
-                
+
                 LocalDate from = LocalDate.now().minusDays(30);
                 LocalDate to = LocalDate.now();
                 try {
@@ -125,7 +133,21 @@ public class AttendanceServlet extends HttpServlet {
                         to = LocalDate.parse(req.getParameter("to"));
                     }
                 } catch (Exception e) { }
-                
+
+                String email=req.getParameter("email");
+                if(email!=null && !email.isBlank()) {
+                    var emailChoices=enrollmentLookup.lookup(currentUser,email);
+                    if(enrollmentId!=null) {
+                        final int selected=enrollmentId;
+                        if(emailChoices.stream().noneMatch(c -> c.enrollmentId()==selected))
+                            throw new IllegalArgumentException("Ghi danh không khớp email đã nhập.");
+                    } else {
+                        var active=emailChoices.stream().filter(c -> "ACTIVE".equals(c.enrollmentStatus())).toList();
+                        if(active.size()!=1) throw new IllegalArgumentException("Email chưa có một ghi danh đang hoạt động duy nhất; hãy chọn đúng chương trình.");
+                        enrollmentId=active.get(0).enrollmentId();
+                    }
+                    req.setAttribute("internEmail",email.trim());
+                }
                 String status = req.getParameter("status");
                 List<AttendanceReportRow> report = attendanceService.getReport(currentUser, enrollmentId, programId, from, to, (status != null && !status.trim().isEmpty()) ? status.trim() : null);
 
@@ -177,7 +199,7 @@ public class AttendanceServlet extends HttpServlet {
         User currentUser = (User) session.getAttribute("currentUser");
 
         String path = req.getServletPath();
-        
+
         if ("/intern/attendance".equals(path)) {
             String action = req.getParameter("action");
             int enrollmentId = 0;
@@ -190,7 +212,7 @@ public class AttendanceServlet extends HttpServlet {
                 resp.sendRedirect(req.getContextPath() + "/intern/attendance?error=" + java.net.URLEncoder.encode("Mã ghi danh không hợp lệ", "UTF-8"));
                 return;
             }
-            
+
             try {
                 if ("checkin".equals(action)) {
                     attendanceService.checkIn(currentUser, enrollmentId);
