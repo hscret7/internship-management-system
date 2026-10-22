@@ -129,4 +129,12 @@ public class Contract implements Serializable {
                 ", confirmedAt=" + confirmedAt +
                 '}';
     }
+
+    /** Opaque revision of the exact file displayed to the intern; no private path exposed. */
+    public String getFileVersion() {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(java.util.Objects.toString(filePath, "").getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
 }

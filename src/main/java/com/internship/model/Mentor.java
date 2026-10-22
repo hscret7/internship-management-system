@@ -124,6 +124,14 @@ public class Mentor implements Serializable {
         this.currentMenteeCount = currentMenteeCount;
     }
 
+    public int getRemainingCapacity() {
+        return Math.max(0, maxMentees - currentMenteeCount);
+    }
+
+    public boolean isAtCapacity() {
+        return currentMenteeCount >= maxMentees;
+    }
+
     @Override
     public String toString() {
         return "Mentor{" +

@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('src/main/webapp/assets/js/fe3.js','utf8');
+function node(tag,text,className){return{tag,text,className,style:{},children:[],appendChild(c){this.children.push(c);},replaceChildren(...c){this.children=c;}};}
+const sandbox={node,moment:v=>v};
+vm.runInNewContext(source.slice(source.indexOf('    function gradeBadge('),source.indexOf('    async function evaluationPage(')),sandbox);
+const text=n=>[n.text,...n.children.map(text)].filter(v=>v!==null&&v!==undefined).join(' ');
+const entry={internName:'Intern A',programName:'Program A'};
+const card=sandbox.renderAssessmentCard({skillsScore:2,attitudeScore:5,mentorName:'Mentor A',createdAt:'2026-10-18',comment:'<img onerror=alert(1)> Nhận xét'},entry,true);
+assert.match(text(card),/2 \/ 5/);assert.match(text(card),/5 \/ 5/);assert.match(text(card),/7.0 \/ 10.0/);
+assert.match(text(card),/Mentor A/);assert.match(text(card),/2026-10-18/);assert.match(text(card),/<img onerror=alert\(1\)>/);
+const detail={skillAvg:4,attitudeAvg:3,score10:7,overallComment:'Ghi chú riêng',skills:[{title:'Code',score:4,comment:'<script>test</script>'}],attitude:[]};
+const rich=sandbox.renderAssessmentCard({skillsScore:4,attitudeScore:3,comment:'<!--EVAL_DATA:'+JSON.stringify(detail)+'-->'},entry,true);
+assert.match(text(rich),/Code/);assert.match(text(rich),/Ghi chú riêng/);assert.match(text(rich),/<script>test<\/script>/);
+const old=node('div');sandbox.showEvaluation({score:0,comment:'Legacy zero'},old);assert.match(text(old),/0 \/ 100/);
+assert.ok(source.includes("entry.status === 'COMPLETED'"),'completion certificate must not be offered for ACTIVE enrollment');
+const from=source.indexOf('    function summaryDisplayScore100(');
+const until=source.indexOf('    async function hrEvaluations()',from);
+vm.runInNewContext(source.slice(from,until),sandbox);
+assert.equal(sandbox.summaryDisplayScore100({score:null,skillScore:4,attitudeScore:3}),70);
+assert.equal(sandbox.summaryDisplayScore100({score:0}),0);
+assert.ok(Number.isNaN(sandbox.summaryDisplayScore100({score:null})));
+console.log('PASS: Khánh assessment cards, rubric metadata, literal comments, computed display, legacy zero and completion gate.');

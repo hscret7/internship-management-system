@@ -12,6 +12,7 @@
             <span class="fe3-hero__eyebrow"><i class="bi bi-compass"></i> Không gian Mentor</span>
             <h2>Tổng quan hướng dẫn</h2>
             <p>Theo dõi thực tập sinh, tiến độ công việc và các báo cáo cần phản hồi trong một nơi.</p>
+            <a class="btn btn-outline-primary" href="${ctx}/mentor/meetings"><i class="bi bi-calendar-event"></i> Quản lý lịch họp</a>
         </div>
         <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-people"></i></div>
     </div>

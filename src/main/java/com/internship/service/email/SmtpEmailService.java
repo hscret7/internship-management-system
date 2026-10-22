@@ -26,6 +26,9 @@ public class SmtpEmailService implements EmailService {
     private final Properties config;
 
     public SmtpEmailService() {
+        if (Boolean.getBoolean("internship.mail.disabled") || "true".equalsIgnoreCase(System.getenv("INTERNSHIP_MAIL_DISABLED"))) {
+            throw new EmailException("Email is explicitly disabled for this environment.");
+        }
         this.config = loadConfiguration();
     }
 

@@ -557,6 +557,41 @@ class EnrollmentServiceTest {
     @DisplayName("Actual EnrollmentService transaction flow")
     class ServiceFlowTests {
         @Test
+        void initialMentorUsesSharedAssignmentFlow() throws SQLException {
+            appDAO.addApp(1, 7, "APPROVED");
+            programDAO.addProgram(3, "Program", "ACTIVE", 2);
+            mentorDAO.addMentor(5, 200L, "ACTIVE", 2, 0);
+            var result = service().enrollInternWithMentor(1, 3, 5, 100L);
+            assertEquals(1, result.enrollmentId()); assertNotNull(result.assignmentId());
+            assertNull(result.mentorWarning()); assertEquals(2, connections.commits.get());
+        }
+
+        @Test
+        void mentorFailureKeepsEnrollmentAndRetryAssignsItWithoutDuplicate() throws SQLException {
+            appDAO.addApp(1, 7, "APPROVED");
+            programDAO.addProgram(3, "Program", "ACTIVE", 2);
+            mentorDAO.addMentor(5, 200L, "ACTIVE", 2, 2);
+            var result = service().enrollInternWithMentor(1, 3, 5, 100L);
+            assertNull(result.assignmentId()); assertNotNull(result.mentorWarning());
+            assertEquals(1, enrollmentDAO.enrollments.size());
+            assertEquals(1, connections.commits.get()); assertEquals(1, connections.rollbacks.get());
+            mentorDAO.mentors.get(0).setCurrentMenteeCount(0);
+            service().assignMentor(result.enrollmentId(), 5, 100L);
+            assertEquals(1, enrollmentDAO.enrollments.size());
+            assertNotNull(service().getCurrentMentor(result.enrollmentId()));
+            assertThrows(IllegalStateException.class, () -> service().enrollIntern(1, 3, 100L));
+        }
+
+        @Test
+        void enrollmentDoesNotRequireMentorOrContractConfirmation() throws SQLException {
+            appDAO.addApp(1, 7, "APPROVED");
+            programDAO.addProgram(3, "Program", "ACTIVE", 2);
+            var result = service().enrollInternWithMentor(1, 3, null, 100L);
+            assertNull(result.assignmentId()); assertNull(result.mentorWarning());
+            assertEquals(1, connections.commits.get());
+        }
+
+        @Test
         void concurrentApplicationsCannotCreateTwoActiveEnrollments() throws Exception {
             appDAO.addApp(1, 7, "APPROVED");
             appDAO.addApp(2, 7, "APPROVED");

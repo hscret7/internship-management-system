@@ -49,19 +49,28 @@ BE4 cung cấp JSON API trên cùng ứng dụng Tomcat. Không cần server/API
 | Method | Path sau `/hr/be4` | Tham số | Kết quả |
 |---|---|---|---|
 | GET | `/dashboard` | - | `HrDashboard` |
-| GET | `/evaluations` | - | `EvaluationSummary[]` gồm mã enrollment, TTS, chương trình, mentor đánh giá, điểm, nhận xét và ngày đánh giá |
+| GET | `/evaluations` | - | `EvaluationSummary[]` gồm mã enrollment, `internProfileId`, tên TTS, chương trình, mentor đánh giá, điểm, nhận xét và ngày đánh giá |
 | GET | `/evaluation` | `enrollmentId` | `Evaluation` hoặc `null` |
+
+`internProfileId` là mã hồ sơ TTS ổn định, dùng để đếm số người đã được đánh giá.
+Không dùng tên TTS làm khóa: hai người có thể trùng tên và một người có nhiều đợt thực tập.
+Đây là trường JSON bổ sung; các trường cũ và route không thay đổi, không cần migration DB.
 
 `HrDashboard` gồm `totalInterns`, `activeEnrollments`, `completedEnrollments`, `completionRatePercent`, `internsByUniversity`, `internsByMajor`, `activeInternsByMentor`. Ba mảng cuối gồm `{ "label": "...", "count": 1 }`. Tỷ lệ = completed / (active + completed) × 100; không tính enrollment cancelled. `MentorDashboard` gồm `activeInterns`, `tasksTodo`, `tasksInProgress`, `tasksDone`, `reportsSubmitted`, `reportsReviewed`, `evaluationsCompleted`.
 
 ## Quy tắc nghiệp vụ
 
-- Mentor hiện tại mới tạo/giao task, phản hồi báo cáo, đánh giá tổng kết; enrollment cần `ACTIVE` cho thao tác ghi.
+- Mentor đang hoạt động được tạo mẫu task; chỉ mentor hiện tại của enrollment `ACTIVE` được giao task, phản hồi báo cáo và đánh giá tổng kết cho enrollment đó.
 - Intern chỉ sửa task/report của chính mình trong enrollment `ACTIVE`. Tiến độ tăng dần, 0–100; 100 là `DONE`, không sửa nữa. Mỗi lần cập nhật có một dòng lịch sử.
 - Mỗi enrollment chỉ có một báo cáo cho mỗi `weekNumber`; báo cáo `DRAFT` mới sửa/nộp được; `SUBMITTED` mới được mentor phản hồi một lần.
 - Một enrollment có tối đa một evaluation; score tối đa hai số thập phân. Mentor đánh giá trước khi HR kết thúc enrollment.
 - GET vẫn xem được lịch sử của enrollment đã hoàn thành (khi intern còn sở hữu hoặc mentor vẫn được phân công); POST không cho sửa. Mentor đã bị gỡ/đổi khỏi enrollment không còn quyền xem lịch sử của enrollment đó.
+- Đổi mentor không đổi `enrollment_id`, task/report/progress đã có hoặc tác giả lịch sử. Mentor mới được xem và tiếp tục xử lý dữ liệu thuộc enrollment, nhưng không được ghi đè evaluation đã tạo.
+- `activeInterns`, số task và report trên dashboard mentor tính theo phân công hiện tại. `evaluationsCompleted` là số evaluation do mentor đó đã thực hiện (lịch sử tác giả), không phải số evaluation của mentee hiện tại. FE không dùng chỉ số này để suy ra workload/còn chỗ.
+- Giao task, phản hồi và đánh giá giữ khóa enrollment cùng transaction với kiểm tra mentor hiện tại. Nếu thao tác HR đổi mentor đã khóa trước, request phải đợi và kiểm tra lại quyền sau bàn giao; nếu thao tác BE4 khóa trước, nó hoàn tất trước khi HR bàn giao. Không có thay đổi format API.
 
 ## Tích hợp DB và kiểm thử
 
-Chạy `database/schema.sql`, `sql/schema_be2.sql`, `sql/schema_be3.sql`, rồi `sql/schema_be4.sql` theo thứ tự trên database test. BE4 chưa chỉnh file chung BE1/BE2/BE3. Khi BE2/BE3 merge vào `develop`, BE4 phải cập nhật nhánh, chạy schema và smoke test toàn luồng trên MySQL/Tomcat. `mvn clean package` trên foundation hiện tại mới xác nhận compile, chưa chạy SQL thật.
+Chạy `database/schema.sql`, `sql/schema_be2.sql`, `sql/schema_be3.sql`, rồi `sql/schema_be4.sql` theo thứ tự trên database test. Bản Sprint 2 không đổi DDL hay file chung BE1/BE2/BE3; không cần migration mới cho BE4.
+
+`mvn clean package` chạy kiểm tra nhanh không cần MySQL; bộ MySQL opt-in không được chạy nếu chưa bật. `mvn -Dbe4.mysql=true clean package` chạy thêm 14 ca regression trên database tạm, dùng tài khoản từ `db.properties` local (không commit). Test cần quyền CREATE/DROP database và chỉ dọn database `be4_sprint2_test_<UUID>` do chính lần chạy đó tạo; không thay đổi database ứng dụng. Kết quả và checklist QA xem `docs/BE4_SPRINT2_HANDOFF.md`. Kiểm tra Tomcat/UI tích hợp là bước QA riêng, không được suy ra chỉ từ build thành công.

@@ -1,20 +1,30 @@
-<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Quản lý ghi danh</title>
-</head>
-<body>
-<h1>Quản lý ghi danh & phân mentor</h1>
-<p><a href="${pageContext.request.contextPath}/hr/catalog">Thiết lập phòng ban, chương trình, mentor</a></p>
+<%-- Each presentation includes its own shared layout exactly once. --%>
+<c:choose>
+<c:when test="${param.ui eq 'mentor' and viewMode ne 'enroll-form'}">
+    <jsp:include page="/WEB-INF/views/hr/mentor-management.jsp" />
+</c:when>
+<c:otherwise>
+<c:set var="pageTitle" value="Ghi danh & phân mentor" />
+<c:set var="activePage" value="hr-enrollments" />
+<c:set var="pageStylesheet" value="fe3.css" />
+<%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+<section class="fe3-page fe3-be3">
+    <div class="fe3-hero">
+        <div>
+            <span class="fe3-hero__eyebrow"><i class="bi bi-person-gear"></i> PHÂN CÔNG</span>
+            <h2>Ghi danh & phân mentor</h2>
+            <p>Đưa hồ sơ đã duyệt vào chương trình và theo dõi mentor phụ trách.</p>
+        </div>
+        <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-people"></i></div>
+    </div>
+    <div class="fe3-be3__actions"><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/hr/catalog">Thiết lập chương trình <i class="bi bi-arrow-right"></i></a></div>
+    <div class="fe3-panel">
 
 <c:if test="${not empty successMessage}">
-    <div style="color:green"><c:out value="${successMessage}"/></div>
-</c:if>
-<c:if test="${not empty errorMessage}">
-    <div style="color:red"><c:out value="${errorMessage}"/></div>
+    <div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div>
 </c:if>
 
 <%-- Detail view --%>
@@ -37,7 +47,7 @@
     </c:if>
 
     <h3>Lịch sử mentor</h3>
-    <table border="1">
+    <div class="fe3-be3__table-scroll"><table>
         <tr><th>Mentor</th><th>Ngày gán</th><th>Ngày kết thúc</th><th>Lý do</th><th>Gán bởi</th></tr>
         <c:forEach var="ma" items="${mentorHistory}">
             <tr>
@@ -48,7 +58,7 @@
                 <td><c:out value="${ma.assignedByName}"/></td>
             </tr>
         </c:forEach>
-    </table>
+    </table></div>
     <p><a href="${pageContext.request.contextPath}/hr/enrollments">← Quay lại</a></p>
 </c:if>
 
@@ -58,12 +68,23 @@
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="enroll"/>
-        <label>Mã đơn (Application ID): <input type="number" name="applicationId" value="${applicationId}" required/></label><br/>
+        <div class="mb-3" data-email-selection="application" data-context="${ctx}" data-email-name="applicationEmail">
+            <input type="hidden" id="applicationId" name="applicationId" value="<c:out value='${applicationId}'/>" data-email-value>
+        </div>
         <label>Chương trình:
             <select name="programId" required>
                 <option value="">-- Chọn --</option>
                 <c:forEach var="prog" items="${programs}">
                     <option value="${prog.programId}"><c:out value="${prog.programName}"/> (<c:out value="${prog.departmentName}"/>)</option>
+                </c:forEach>
+            </select>
+        </label><br/>
+        <label>Mentor ban đầu (không bắt buộc, phải cùng phòng ban):
+            <select name="mentorId">
+                <option value="">-- Phân mentor sau --</option>
+                <c:forEach var="m" items="${mentors}">
+                    <option value="${m.mentorId}"><c:out value="${m.fullName}"/>
+                        — <c:out value="${m.departmentName}"/> (${m.currentMenteeCount}/${m.maxMentees})</option>
                 </c:forEach>
             </select>
         </label><br/>
@@ -75,6 +96,7 @@
 <%-- Assign mentor form --%>
 <c:if test="${viewMode == 'assign-form' and not empty enrollment}">
     <h2>Phân mentor cho <c:out value="${enrollment.internName}"/></h2>
+    <c:if test="${empty mentors}"><p>Chưa có mentor cùng phòng ban còn chỗ. Hãy kiểm tra danh mục mentor.</p></c:if>
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="assign-mentor"/>
@@ -95,6 +117,7 @@
 <%-- Change mentor form --%>
 <c:if test="${viewMode == 'change-form' and not empty enrollment}">
     <h2>Đổi mentor cho <c:out value="${enrollment.internName}"/></h2>
+    <c:if test="${empty mentors}"><p>Chưa có mentor khác cùng phòng ban còn chỗ.</p></c:if>
     <form method="post" action="${pageContext.request.contextPath}/hr/enrollments">
         <input type="hidden" name="csrfToken" value="${csrfToken}"/>
         <input type="hidden" name="action" value="change-mentor"/>
@@ -107,7 +130,7 @@
                 </c:forEach>
             </select>
         </label><br/>
-        <label>Lý do đổi: <input type="text" name="endReason" required/></label><br/>
+        <label>Lý do đổi: <input type="text" name="endReason" maxlength="200" required/></label><br/>
         <button type="submit">Đổi mentor</button>
     </form>
     <p><a href="${pageContext.request.contextPath}/hr/enrollments">← Quay lại</a></p>
@@ -118,7 +141,7 @@
     <p>
         <a href="${pageContext.request.contextPath}/hr/enrollments?action=enroll-form">Ghi danh mới</a>
     </p>
-    <table border="1">
+    <div class="fe3-be3__table-scroll"><table>
         <tr>
             <th>ID</th><th>Thực tập sinh</th><th>Chương trình</th>
             <th>Trạng thái</th><th>Mentor</th><th>Ngày ghi danh</th><th>Thao tác</th>
@@ -136,7 +159,12 @@
                 </td>
             </tr>
         </c:forEach>
-    </table>
+    </table></div>
 </c:if>
-</body>
-</html>
+    </div>
+</section>
+
+<script src="${ctx}/assets/js/email-selection.js?v=20261019-email-suggest" defer></script>
+<%@ include file="/WEB-INF/views/common/footer.jsp" %>
+</c:otherwise>
+</c:choose>

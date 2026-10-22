@@ -31,7 +31,7 @@
             <div id="feedbackList" class="fe3-feedback-list"></div>
             <form id="feedbackForm" class="d-none mt-3">
                 <label class="form-label" for="feedbackComment">Nhận xét</label>
-                <textarea class="form-control mb-3" id="feedbackComment" name="comment" rows="4"></textarea>
+                <textarea class="form-control mb-3" id="feedbackComment" name="comment" rows="4" maxlength="10000" required></textarea>
                 <label class="form-label" for="feedbackRating">Điểm phản hồi (1–5, không bắt buộc)</label>
                 <input class="form-control mb-3" id="feedbackRating" name="rating" type="number" min="1" max="5">
                 <button class="btn btn-primary" type="submit">Gửi phản hồi</button>

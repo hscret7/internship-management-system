@@ -25,6 +25,7 @@ public final class PasswordUtil {
     ) {
         if (plainPassword == null
                 || plainPassword.isBlank()
+                || plainPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72
                 || passwordHash == null
                 || passwordHash.isBlank()) {
 
@@ -43,6 +44,9 @@ public final class PasswordUtil {
             throw new IllegalArgumentException(
                     "Password must not be null or blank."
             );
+        }
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("Mật khẩu không được vượt quá 72 byte UTF-8 (ký tự có dấu chiếm nhiều byte).");
         }
     }
 }

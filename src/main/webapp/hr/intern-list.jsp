@@ -8,37 +8,58 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h4 mb-0">Quản lý Thực Tập Sinh</h2>
+        <a class="btn btn-primary" href="${ctx}/hr/applications">Duyệt đơn ứng tuyển chờ xử lý</a>
     </div>
 
-    <!-- Form Tìm Kiếm & Lọc (Tích hợp BE2 logic + FE2 Layout) -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form action="${pageContext.request.contextPath}/hr/interns" method="GET" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold small text-muted">Họ và tên</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" name="name" placeholder="Nhập tên thực tập sinh..." value="<c:out value='${searchName}'/>">
-                    </div>
+    <!-- Thêm thư viện FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Thanh công cụ Tìm Kiếm & Lọc Thực Tập Sinh (US03) -->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light rounded">
+            <!-- Form HTML thực tế gửi request GET -->
+            <form id="filterForm" class="row g-3 align-items-end" action="${pageContext.request.contextPath}/hr/interns" method="GET">
+                <!-- 1. Input text để tìm kiếm theo Tên hoặc Email -->
+                <div class="col-md-4 col-sm-12">
+                    <label for="searchInput" class="form-label fw-semibold small text-muted">
+                        <i class="fas fa-search me-1"></i>Tìm kiếm cá nhân
+                    </label>
+                    <input type="text" class="form-control" id="searchInput" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Nhập Tên hoặc Email...">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold small text-muted">Trường Đại học</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-mortarboard"></i></span>
-                        <input type="text" class="form-control" name="university" placeholder="Tên trường ĐH/CĐ..." value="<c:out value='${searchUniversity}'/>">
-                    </div>
+                
+                <!-- 2. Thẻ Select lọc theo Chương trình thực tập -->
+                <div class="col-md-3 col-sm-6">
+                    <label for="programSelect" class="form-label fw-semibold small text-muted">
+                        <i class="fas fa-graduation-cap me-1"></i>Chương trình thực tập
+                    </label>
+                    <select class="form-select" id="programSelect" name="program">
+                        <option value="">-- Tất cả chương trình --</option>
+                        <c:forEach var="program" items="${programs}">
+                            <option value="${program.programId}" ${selectedProgram eq program.programId ? 'selected' : ''}><c:out value="${program.programName}"/></option>
+                        </c:forEach>
+                    </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold small text-muted">Chuyên ngành</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-book"></i></span>
-                        <input type="text" class="form-control" name="major" placeholder="Chuyên ngành..." value="<c:out value='${searchMajor}'/>">
-                    </div>
+                
+                <!-- 3. Thẻ Select lọc theo Trạng thái -->
+                <div class="col-md-3 col-sm-6">
+                    <label for="statusSelect" class="form-label fw-semibold small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>Trạng thái
+                    </label>
+                    <select class="form-select" id="statusSelect" name="status">
+                        <option value="">-- Mọi hồ sơ --</option>
+                        <option value="ACTIVE" ${selectedStatus eq 'ACTIVE' ? 'selected' : ''}>Hồ sơ hiệu lực</option>
+                        <option value="INACTIVE" ${selectedStatus eq 'INACTIVE' ? 'selected' : ''}>Hồ sơ tạm dừng</option>
+                    </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-funnel me-1"></i>Tìm kiếm
+                
+                <!-- 4. Nút Tìm kiếm (Primary) và Xóa bộ lọc (Secondary) -->
+                <div class="col-md-2 col-sm-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm" title="Tìm kiếm">
+                        <i class="fas fa-filter me-1"></i>Lọc
                     </button>
+                    <a href="${pageContext.request.contextPath}/hr/interns" class="btn btn-secondary shadow-sm" title="Xóa bộ lọc">
+                        <i class="fas fa-sync-alt"></i>
+                    </a>
                 </div>
             </form>
         </div>
@@ -89,7 +110,7 @@
                                         <td>
                                             <c:choose>
                                               <c:when test="${p.status == 'ACTIVE'}">
-                                                  <span class="badge bg-success">Đang thực tập</span>
+                                                  <span class="badge bg-success">Hồ sơ hiệu lực</span>
                                               </c:when>
                                               <c:otherwise>
                                                   <span class="badge bg-secondary"><c:out value="${p.status}" /></span>
@@ -122,3 +143,4 @@
 </div>
 
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+

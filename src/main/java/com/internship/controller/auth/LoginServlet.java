@@ -1,5 +1,8 @@
 package com.internship.controller.auth;
 
+import java.io.IOException;
+import com.internship.service.AuditLogService;
+
 import com.internship.model.User;
 import com.internship.service.AuthService;
 
@@ -10,10 +13,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-import java.io.IOException;
-
 @WebServlet("/auth/login")
 public class LoginServlet extends HttpServlet {
+
+    private final AuditLogService auditLog = new AuditLogService();
 
     private AuthService authService;
 
@@ -32,10 +35,10 @@ public class LoginServlet extends HttpServlet {
                 request.getSession(false);
 
         if (session != null
-                && session.getAttribute("currentUser") != null) {
+                && session.getAttribute("currentUser") instanceof User user) {
 
             response.sendRedirect(
-                    request.getContextPath() + "/"
+                    request.getContextPath() + getLandingPath(user)
             );
 
             return;
@@ -45,6 +48,7 @@ public class LoginServlet extends HttpServlet {
                 "/login.jsp"
         ).forward(request, response);
     }
+
     @Override
     protected void doPost(
             HttpServletRequest request,
@@ -52,6 +56,13 @@ public class LoginServlet extends HttpServlet {
     ) throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
+
+        if (!com.internship.util.CsrfToken.valid(request)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            request.setAttribute("error", "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.");
+            request.getRequestDispatcher("/login.jsp").forward(request, response);
+            return;
+        }
 
         String username =
                 request.getParameter("username");
@@ -68,6 +79,7 @@ public class LoginServlet extends HttpServlet {
                     );
 
             if (user == null) {
+                auditLog.recordBestEffort(null, "LOGIN", "USER", null, "FAILURE");
 
                 request.setAttribute(
                         "error",
@@ -82,8 +94,11 @@ public class LoginServlet extends HttpServlet {
                 request.getRequestDispatcher(
                         "/login.jsp"
                 ).forward(request, response);
+
                 return;
             }
+
+            auditLog.recordBestEffort(user.getUserId(), "LOGIN", "USER", user.getUserId(), "SUCCESS");
 
             HttpSession oldSession =
                     request.getSession(false);
@@ -106,7 +121,7 @@ public class LoginServlet extends HttpServlet {
             );
 
             response.sendRedirect(
-                    request.getContextPath() + "/"
+                    request.getContextPath() + getLandingPath(user)
             );
 
         } catch (Exception e) {
@@ -116,5 +131,22 @@ public class LoginServlet extends HttpServlet {
                     e
             );
         }
+    }
+
+    private String getLandingPath(User user) {
+
+        if (user == null
+                || user.getRole() == null
+                || user.getRole().getRoleName() == null) {
+            return "/";
+        }
+
+        return switch (user.getRole().getRoleName()) {
+            case "HR" -> "/hr/dashboard";
+            case "MENTOR" -> "/mentor/dashboard";
+            case "INTERN" -> "/intern/profile";
+            case "ADMIN" -> "/admin/accounts";
+            default -> "/";
+        };
     }
 }

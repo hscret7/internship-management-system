@@ -187,10 +187,12 @@ public class ProgramEnrollmentDAO {
     public ProgramEnrollment getActiveEnrollmentByIntern(int internProfileId) throws SQLException {
         String sql = """
             SELECT e.*, ip.full_name AS intern_name, p.program_name,
+                   d.department_name, p.start_date, p.end_date,
                    m.mentor_id AS current_mentor_id, u.full_name AS current_mentor_name
             FROM program_enrollments e
             JOIN intern_profiles ip ON e.intern_profile_id = ip.profile_id
             JOIN internship_programs p ON e.program_id = p.program_id
+            JOIN departments d ON p.department_id = d.department_id
             LEFT JOIN mentor_assignments ma ON e.enrollment_id = ma.enrollment_id AND ma.ended_at IS NULL
             LEFT JOIN mentors m ON ma.mentor_id = m.mentor_id
             LEFT JOIN users u ON m.user_id = u.user_id
@@ -251,6 +253,11 @@ public class ProgramEnrollmentDAO {
         } catch (SQLException ignored) { }
         try {
             e.setProgramName(rs.getString("program_name"));
+        } catch (SQLException ignored) { }
+        try {
+            e.setDepartmentName(rs.getString("department_name"));
+            e.setStartDate(rs.getDate("start_date"));
+            e.setEndDate(rs.getDate("end_date"));
         } catch (SQLException ignored) { }
         try {
             int mentorId = rs.getInt("current_mentor_id");

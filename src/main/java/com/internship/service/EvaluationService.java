@@ -44,16 +44,28 @@ public class EvaluationService {
             throw new IllegalArgumentException("Điểm tổng kết tối đa 2 chữ số thập phân", exception);
         }
         try (Connection connection = connections.open()) {
-            Integer mentorId = access.findCurrentMentorId(connection, mentorUserId, enrollmentId);
-            if (mentorId == null) {
-                throw new SecurityException("Chỉ mentor hiện tại của enrollment ACTIVE được đánh giá");
-            }
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            connection.setAutoCommit(false);
             try {
-                return evaluations.create(connection, enrollmentId, mentorId, normalized, comment);
-            } catch (SQLIntegrityConstraintViolationException exception) {
-                if (exception.getErrorCode() == 1062) {
-                    throw new IllegalStateException("Đợt thực tập này đã có đánh giá tổng kết", exception);
+                access.lockEnrollmentForMentorWrite(connection, enrollmentId);
+                Integer mentorId = access.findCurrentMentorId(connection, mentorUserId, enrollmentId);
+                if (mentorId == null) {
+                    throw new SecurityException("Chỉ mentor hiện tại của enrollment ACTIVE được đánh giá");
                 }
+                Evaluation created;
+                try {
+                    created = evaluations.create(connection, enrollmentId, mentorId, normalized, comment);
+                } catch (SQLIntegrityConstraintViolationException exception) {
+                    if (exception.getErrorCode() == 1062) {
+                        throw new IllegalStateException("Đợt thực tập này đã có đánh giá tổng kết", exception);
+                    }
+                    throw exception;
+                }
+                connection.commit();
+                return created;
+            } catch (SQLException | RuntimeException exception) {
+                try { connection.rollback(); }
+                catch (SQLException rollbackFailure) { exception.addSuppressed(rollbackFailure); }
                 throw exception;
             }
         }

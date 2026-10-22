@@ -6,6 +6,7 @@
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
 
 <div class="container-fluid mt-4">
+    <div class="alert alert-warning" role="status">Chức năng phân công Mentor chưa có API backend tương ứng nên hiện chưa khả dụng.</div>
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm">
@@ -15,6 +16,7 @@
                 <div class="card-body">
                     <!-- Form gửi dữ liệu phân công lên API của BE3 -->
                     <form action="${pageContext.request.contextPath}/hr/mentor-assignment/save" method="POST">
+    <input type="hidden" name="csrfToken" value="${csrfToken}" />
                         
                         <div class="mb-3">
                             <label class="form-label fw-bold">Thực Tập Sinh (Đợt Thực Tập) <span class="text-danger">*</span></label>

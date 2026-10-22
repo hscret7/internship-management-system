@@ -12,6 +12,17 @@ import java.util.List;
  */
 public class DepartmentDAO {
 
+    /** Serializes program identity checks within the destination department. */
+    public void lockDepartment(int departmentId, Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT department_id FROM departments WHERE department_id = ? FOR UPDATE")) {
+            ps.setInt(1, departmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new IllegalArgumentException("Phòng ban không tồn tại.");
+            }
+        }
+    }
+
     public int createDepartment(Department dept) throws SQLException {
         String sql = "INSERT INTO departments (department_name, description) VALUES (?, ?)";
         try (Connection conn = DBContext.getConnection();

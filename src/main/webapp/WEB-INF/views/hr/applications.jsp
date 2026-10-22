@@ -1,30 +1,42 @@
-<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Quản lý đơn ứng tuyển</title>
-</head>
-<body>
-<h1>Quản lý đơn ứng tuyển</h1>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<c:set var="pageTitle" value="Duyệt hồ sơ" />
+<c:set var="activePage" value="hr-applications" />
+<c:set var="pageStylesheet" value="fe3.css" />
+<%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+<section class="fe3-page fe3-be3">
+    <div class="fe3-hero">
+        <div>
+            <span class="fe3-hero__eyebrow"><i class="bi bi-inbox"></i> TUYỂN DỤNG</span>
+            <h2>Duyệt hồ sơ ứng tuyển</h2>
+            <p>Xem đơn của thực tập sinh và xử lý các hồ sơ đang chờ duyệt.</p>
+        </div>
+        <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-file-earmark-check"></i></div>
+    </div>
+    <div class="fe3-panel">
 
 <c:if test="${not empty successMessage}">
-    <div style="color:green"><c:out value="${successMessage}"/></div>
-</c:if>
-<c:if test="${not empty errorMessage}">
-    <div style="color:red"><c:out value="${errorMessage}"/></div>
+    <div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div>
 </c:if>
 
 <c:if test="${viewMode == 'detail' and not empty application}">
     <h2>Chi tiết đơn #<c:out value="${application.applicationId}"/></h2>
     <p>Thực tập sinh: <c:out value="${application.internName}"/> (<c:out value="${application.internEmail}"/>)</p>
     <p>Trạng thái: <c:out value="${application.status}"/></p>
-    <p>Ngày nộp: <c:out value="${application.submittedAt}"/></p>
+    <p>Ngày nộp: <fmt:formatDate value="${application.submittedAt}" pattern="dd/MM/yyyy HH:mm" timeZone="Asia/Ho_Chi_Minh"/></p>
     <c:if test="${not empty application.reviewerName}">
         <p>Người duyệt: <c:out value="${application.reviewerName}"/></p>
-        <p>Ngày duyệt: <c:out value="${application.reviewedAt}"/></p>
     </c:if>
+    <p>Ngày duyệt:
+        <c:choose>
+            <c:when test="${not empty application.reviewedAt}">
+                <fmt:formatDate value="${application.reviewedAt}" pattern="dd/MM/yyyy HH:mm" timeZone="Asia/Ho_Chi_Minh"/>
+            </c:when>
+            <c:otherwise>Chưa duyệt</c:otherwise>
+        </c:choose>
+    </p>
     <c:if test="${not empty application.rejectReason}">
         <p>Lý do từ chối: <c:out value="${application.rejectReason}"/></p>
     </c:if>
@@ -54,7 +66,7 @@
         <a href="${pageContext.request.contextPath}/hr/applications?action=all">Tất cả</a>
     </p>
 
-    <table border="1">
+    <div class="fe3-be3__table-scroll"><table>
         <tr>
             <th>Mã đơn</th><th>Thực tập sinh</th><th>Trạng thái</th>
             <th>Ngày nộp</th><th>Thao tác</th>
@@ -64,13 +76,15 @@
                 <td><c:out value="${app.applicationId}"/></td>
                 <td><c:out value="${app.internName}"/></td>
                 <td><c:out value="${app.status}"/></td>
-                <td><c:out value="${app.submittedAt}"/></td>
+                <td><fmt:formatDate value="${app.submittedAt}" pattern="dd/MM/yyyy HH:mm" timeZone="Asia/Ho_Chi_Minh"/></td>
                 <td>
                     <a href="${pageContext.request.contextPath}/hr/applications?action=detail&id=${app.applicationId}">Xem</a>
                 </td>
             </tr>
         </c:forEach>
-    </table>
+    </table></div>
 </c:if>
-</body>
-</html>
+    </div>
+</section>
+
+<%@ include file="/WEB-INF/views/common/footer.jsp" %>

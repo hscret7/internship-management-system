@@ -30,9 +30,12 @@ public class AuthorizationFilter implements Filter {
                 (HttpServletResponse) servletResponse;
 
         String contextPath = request.getContextPath();
-        String requestURI = request.getRequestURI();
+        String path = com.internship.util.RequestPath.mapped(request);
 
-        String path = requestURI.substring(contextPath.length());
+        if (path.equals("/uploads") || path.startsWith("/uploads/")) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
 
         /*
          * Authorization is only required for role-specific areas.

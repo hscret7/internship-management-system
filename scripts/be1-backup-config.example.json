@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "container": "REPLACE_WITH_CONTAINER",
+  "database": "internship_management",
+  "client_cnf": "/run/secrets/backup-client.cnf",
+  "output_dir": "/REPLACE_WITH_PRIVATE_BACKUP_DIRECTORY",
+  "timeout_seconds": 1800,
+  "retention_enabled": false,
+  "keep_days": 14,
+  "min_copies": 3
+}

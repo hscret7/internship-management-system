@@ -25,6 +25,17 @@ public final class DBConnection {
     }
 
     private static void loadProperties() {
+        // Choose one environment configuration before connecting; never fallback on failure.
+        if (System.getenv("DB_URL") != null || System.getenv("DB_NAME") != null) {
+            url = System.getenv("DB_URL");
+            if (url == null) url = "jdbc:mysql://" + System.getenv().getOrDefault("DB_HOST", "localhost")
+                    + ":" + System.getenv().getOrDefault("DB_PORT", "3306") + "/" + System.getenv("DB_NAME")
+                    + "?characterEncoding=UTF-8&connectionTimeZone=Asia/Ho_Chi_Minh";
+            username = System.getenv("DB_USER"); password = System.getenv("DB_PASS");
+            if (username == null || password == null) throw new IllegalStateException("DB_USER and DB_PASS are required with DB_URL/DB_NAME");
+            try { Class.forName("com.mysql.cj.jdbc.Driver"); } catch (ClassNotFoundException e) { throw new ExceptionInInitializerError(e); }
+            return;
+        }
         Properties properties = new Properties();
 
         try (InputStream input = DBConnection.class

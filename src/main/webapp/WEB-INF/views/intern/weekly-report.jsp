@@ -26,8 +26,12 @@
             <form id="reportCreateForm">
                 <label class="form-label" for="weekNumber">Tuần thứ</label>
                 <input class="form-control mb-3" id="weekNumber" name="weekNumber" type="number" min="1" max="32767" required>
-                <label class="form-label" for="reportContent">Nội dung</label>
-                <textarea class="form-control mb-3" id="reportContent" name="content" rows="6"></textarea>
+                <label class="form-label" for="reportResults">Kết quả công việc</label>
+                <textarea class="form-control mb-3" id="reportResults" name="results" rows="4" maxlength="10000"></textarea>
+                <label class="form-label" for="reportDifficulties">Khó khăn (ghi “Không có” nếu không gặp khó khăn)</label>
+                <textarea class="form-control mb-3" id="reportDifficulties" name="difficulties" rows="3" maxlength="10000"></textarea>
+                <label class="form-label" for="reportNextPlan">Kế hoạch tuần tới</label>
+                <textarea class="form-control mb-3" id="reportNextPlan" name="nextPlan" rows="3" maxlength="10000"></textarea>
                 <button class="btn btn-primary" type="submit">Lưu bản nháp</button>
             </form>
             <h2 class="mt-4">Báo cáo đã tạo</h2>
@@ -35,10 +39,15 @@
         </div>
         <div class="fe3-panel">
             <h2>Chi tiết báo cáo</h2>
-            <div id="reportDetail">Chọn một báo cáo.</div>
+            <div id="reportDetail" class="fe3-report-content">Chọn một báo cáo.</div>
             <form id="reportEditForm" class="d-none mt-3">
-                <label class="form-label" for="editReportContent">Nội dung bản nháp</label>
-                <textarea class="form-control mb-3" id="editReportContent" name="content" rows="8"></textarea>
+                <p id="legacyReportNote" class="text-muted d-none">Báo cáo cũ chỉ có một trường nội dung. Nội dung được giữ nguyên ở ô kết quả; bổ sung khó khăn và kế hoạch trước khi nộp.</p>
+                <label class="form-label" for="editReportResults">Kết quả công việc</label>
+                <textarea class="form-control mb-3" id="editReportResults" name="results" rows="4" maxlength="10000"></textarea>
+                <label class="form-label" for="editReportDifficulties">Khó khăn</label>
+                <textarea class="form-control mb-3" id="editReportDifficulties" name="difficulties" rows="3" maxlength="10000"></textarea>
+                <label class="form-label" for="editReportNextPlan">Kế hoạch tuần tới</label>
+                <textarea class="form-control mb-3" id="editReportNextPlan" name="nextPlan" rows="3" maxlength="10000"></textarea>
                 <button class="btn btn-outline-primary" type="submit">Lưu chỉnh sửa</button>
                 <button class="btn btn-primary" id="reportSubmitButton" type="button">Nộp báo cáo</button>
             </form>

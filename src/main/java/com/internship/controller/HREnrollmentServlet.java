@@ -1,8 +1,6 @@
 package com.internship.controller;
 
 import com.internship.model.*;
-import com.internship.model.InternProfile;
-import com.internship.dao.InternProfileDAO;
 import com.internship.dao.InternshipProgramDAO;
 import com.internship.dao.MentorDAO;
 import com.internship.service.EnrollmentService;
@@ -31,12 +29,21 @@ public class HREnrollmentServlet extends HttpServlet {
     private EnrollmentService enrollmentService;
     private InternshipProgramDAO programDAO;
     private MentorDAO mentorDAO;
+    private final com.internship.service.ApprovedApplicationLookupService applicationLookup = new com.internship.service.ApprovedApplicationLookupService();
+
+    public HREnrollmentServlet() { }
+
+    HREnrollmentServlet(EnrollmentService service, InternshipProgramDAO programs, MentorDAO mentors) {
+        enrollmentService = service;
+        programDAO = programs;
+        mentorDAO = mentors;
+    }
 
     @Override
     public void init() throws ServletException {
-        enrollmentService = new EnrollmentService();
-        programDAO = new InternshipProgramDAO();
-        mentorDAO = new MentorDAO();
+        if (enrollmentService == null) enrollmentService = new EnrollmentService();
+        if (programDAO == null) programDAO = new InternshipProgramDAO();
+        if (mentorDAO == null) mentorDAO = new MentorDAO();
     }
 
     /**
@@ -67,6 +74,10 @@ public class HREnrollmentServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        if ("application-options".equals(action)) {
+            writeApplicationChoices(request, response, currentUser);
+            return;
+        }
         CsrfToken.expose(request);
 
         try {
@@ -133,15 +144,19 @@ public class HREnrollmentServlet extends HttpServlet {
 
         String action = request.getParameter("action");
         long hrUserId = currentUser.getUserId();
+        String redirect = request.getContextPath() + "/hr/enrollments";
 
         try {
             switch (action != null ? action : "") {
-                case "enroll" -> handleEnroll(request, hrUserId);
+                case "enroll" -> redirect += "?action=detail&id=" + handleEnroll(request, hrUserId);
                 case "assign-mentor" -> handleAssignMentor(request, hrUserId);
                 case "change-mentor" -> handleChangeMentor(request, hrUserId);
                 default -> request.getSession().setAttribute("errorMessage",
                         "Hành động không hợp lệ.");
             }
+        } catch (com.internship.service.ScheduleLeaveException e) {
+            response.sendError(e.status(), e.getMessage());
+            return;
         } catch (IllegalStateException | IllegalArgumentException e) {
             request.getSession().setAttribute("errorMessage", e.getMessage());
         } catch (SQLException e) {
@@ -150,18 +165,57 @@ public class HREnrollmentServlet extends HttpServlet {
                     "Lỗi hệ thống khi xử lý. Vui lòng thử lại.");
         }
 
-        response.sendRedirect(request.getContextPath() + "/hr/enrollments");
+        response.sendRedirect(redirect);
+    }
+
+    // Choices never create enrollments; POST keeps all existing approval/duplicate/capacity checks.
+    private void writeApplicationChoices(HttpServletRequest request, HttpServletResponse response, User actor)
+            throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-store");
+        try {
+            String raw = request.getParameter("applicationId");
+            Integer id = raw == null || raw.isBlank() ? null : parseIntParam(request, "applicationId");
+            var choices = applicationLookup.find(actor, request.getParameter("email"), id).stream()
+                    .map(c -> Be4Json.fields("applicationId", c.applicationId(), "internName", c.internName(), "email", c.email())).toList();
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", true, "data", choices)));
+        } catch (com.internship.service.ScheduleLeaveException e) {
+            response.setStatus(e.status());
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", e.getMessage())));
+        } catch (IllegalArgumentException e) {
+            response.setStatus(400);
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", e.getMessage())));
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Approved application lookup failed", e);
+            response.setStatus(503);
+            response.getWriter().write(Be4Json.stringify(Be4Json.fields("success", false, "error", "Không thể tìm đơn lúc này. Vui lòng thử lại.")));
+        }
     }
 
     // --- Action handlers ---
 
-    private void handleEnroll(HttpServletRequest request, long hrUserId) throws SQLException {
+    private int handleEnroll(HttpServletRequest request, long hrUserId) throws SQLException {
         int applicationId = parseIntParam(request, "applicationId");
         int programId = parseIntParam(request, "programId");
+        String email = request.getParameter("applicationEmail");
+        if (email != null && !email.isBlank()) {
+            User actor = (User) request.getSession().getAttribute("currentUser");
+            boolean matches = applicationLookup.find(actor, email, null).stream()
+                    .anyMatch(c -> c.applicationId() == applicationId);
+            if (!matches) throw new IllegalArgumentException("Đơn đã chọn không khớp email hoặc không còn đủ điều kiện ghi danh.");
+        }
 
-        int enrollmentId = enrollmentService.enrollIntern(applicationId, programId, hrUserId);
+        String mentorValue = request.getParameter("mentorId");
+        Integer mentorId = mentorValue == null || mentorValue.isBlank() ? null
+                : parseIntParam(request, "mentorId");
+        var result = enrollmentService.enrollInternWithMentor(applicationId, programId, mentorId, hrUserId);
         request.getSession().setAttribute("successMessage",
-                "Đã ghi danh thành công (mã enrollment: " + enrollmentId + ").");
+                "Đã ghi danh thành công (mã enrollment: " + result.enrollmentId() + ")."
+                        + (result.assignmentId() != null ? " Đã phân mentor." : " Chưa phân mentor."));
+        if (result.mentorWarning() != null) {
+            request.getSession().setAttribute("errorMessage", result.mentorWarning());
+        }
+        return result.enrollmentId();
     }
 
     private void handleAssignMentor(HttpServletRequest request, long hrUserId) throws SQLException {
@@ -203,10 +257,12 @@ public class HREnrollmentServlet extends HttpServlet {
     private void handleEnrollForm(HttpServletRequest request) throws SQLException {
         String appIdStr = request.getParameter("applicationId");
         if (appIdStr != null) {
-            request.setAttribute("applicationId", Integer.parseInt(appIdStr.trim()));
+            request.setAttribute("applicationId", parseIntParam(request, "applicationId"));
         }
         List<InternshipProgram> programs = programDAO.getActivePrograms();
         request.setAttribute("programs", programs);
+        request.setAttribute("mentors", mentorDAO.getActiveMentors().stream()
+                .filter(m -> !m.isAtCapacity()).toList());
         request.setAttribute("viewMode", "enroll-form");
     }
 
@@ -218,7 +274,23 @@ public class HREnrollmentServlet extends HttpServlet {
             loadList(request);
             return;
         }
-        List<Mentor> mentors = mentorDAO.getActiveMentors();
+        if (!"ACTIVE".equals(enrollment.getStatus())) {
+            throw new IllegalArgumentException("Chỉ được phân hoặc đổi mentor cho ghi danh ACTIVE.");
+        }
+        if ("assign-form".equals(action) && enrollment.getCurrentMentorId() != null) {
+            throw new IllegalArgumentException("Đã có mentor; hãy dùng chức năng đổi mentor.");
+        }
+        if ("change-form".equals(action) && enrollment.getCurrentMentorId() == null) {
+            throw new IllegalArgumentException("Chưa có mentor; hãy dùng chức năng phân mentor.");
+        }
+        InternshipProgram program = programDAO.getProgramById(enrollment.getProgramId());
+        if (program == null) throw new IllegalArgumentException("Chương trình không tồn tại.");
+        List<Mentor> mentors = mentorDAO.getActiveMentors().stream()
+                .filter(m -> m.getDepartmentId() != null
+                        && m.getDepartmentId() == program.getDepartmentId()
+                        && !m.isAtCapacity()
+                        && !java.util.Objects.equals(m.getMentorId(), enrollment.getCurrentMentorId()))
+                .toList();
         request.setAttribute("enrollment", enrollment);
         request.setAttribute("mentors", mentors);
         request.setAttribute("viewMode", action);
@@ -237,7 +309,9 @@ public class HREnrollmentServlet extends HttpServlet {
             throw new IllegalArgumentException("Thiếu tham số: " + paramName);
         }
         try {
-            return Integer.parseInt(value.trim());
+            int id = Integer.parseInt(value.trim());
+            if (id <= 0) throw new NumberFormatException();
+            return id;
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Tham số không hợp lệ: " + paramName);
         }

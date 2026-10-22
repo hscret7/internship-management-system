@@ -23,6 +23,13 @@
     </properties>
 
     <dependencies>
+        <!-- BE4 US34: shared build dependency change requires BE1 review before merge. -->
+        <dependency>
+            <groupId>org.apache.poi</groupId><artifactId>poi-ooxml</artifactId><version>5.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>3.0.8</version>
+        </dependency>
 
         <!-- Jakarta Servlet API - Tomcat cung cấp khi runtime -->
         <dependency>

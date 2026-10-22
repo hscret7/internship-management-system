@@ -5,8 +5,27 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** Read-only ownership checks against the BE1, BE2 and BE3 tables. */
+/** Ownership checks and the shared BE3 enrollment lock used for mentor writes. */
 public class TaskAccessDAO {
+
+    /**
+     * Serialize a mentor write with BE3 assign/changeMentor on the same enrollment.
+     * Call before checking current mentorship, keep the lock through commit/rollback,
+     * and use READ_COMMITTED so a request waiting behind HR rechecks the new assignment.
+     * This does not change any BE3 data.
+     */
+    public void lockEnrollmentForMentorWrite(Connection connection, int enrollmentId) throws SQLException {
+        if (connection.getAutoCommit()) {
+            throw new IllegalStateException("Mentor write requires an explicit transaction");
+        }
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT enrollment_id FROM program_enrollments WHERE enrollment_id = ? FOR UPDATE")) {
+            statement.setInt(1, enrollmentId);
+            try (ResultSet rows = statement.executeQuery()) {
+                if (!rows.next()) throw new IllegalArgumentException("Không tìm thấy đợt thực tập");
+            }
+        }
+    }
 
     public boolean isActiveMentor(Connection connection, long userId) throws SQLException {
         String sql = """
@@ -107,9 +126,12 @@ public class TaskAccessDAO {
         String sql = """
                 SELECT 1 FROM mentor_assignments ma
                 JOIN mentors m ON m.mentor_id = ma.mentor_id
+                JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                 JOIN users u ON u.user_id = m.user_id
                 JOIN roles r ON r.role_id = u.role_id
-                WHERE m.user_id = ? AND ma.enrollment_id = ? AND ma.ended_at IS NULL
+                WHERE m.user_id = ? AND ma.enrollment_id = ?
+                  AND (ma.ended_at IS NULL OR (pe.status IN ('COMPLETED','CANCELLED')
+                    AND ma.assignment_id = (SELECT MAX(last_ma.assignment_id) FROM mentor_assignments last_ma WHERE last_ma.enrollment_id=pe.enrollment_id)))
                   AND u.status = 'ACTIVE' AND r.role_name = 'MENTOR'
                 """;
         return exists(connection, sql, userId, enrollmentId);

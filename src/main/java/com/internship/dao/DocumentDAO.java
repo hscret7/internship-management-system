@@ -96,6 +96,33 @@ public class DocumentDAO {
         }
     }
 
+    /**
+     * HR duyệt tài liệu (US05 - BE2): PENDING -> APPROVED
+     */
+    public boolean approveDocument(int documentId, long reviewedBy) throws SQLException {
+        String sql = "UPDATE documents SET status = 'APPROVED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = NULL WHERE document_id = ? AND status = 'PENDING'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, reviewedBy);
+            ps.setInt(2, documentId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * HR từ chối tài liệu (US05 - BE2): PENDING -> REJECTED (bắt buộc lý do)
+     */
+    public boolean rejectDocument(int documentId, long reviewedBy, String rejectReason) throws SQLException {
+        String sql = "UPDATE documents SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, reject_reason = ? WHERE document_id = ? AND status = 'PENDING'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, reviewedBy);
+            ps.setString(2, rejectReason);
+            ps.setInt(3, documentId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public boolean deleteDocument(int documentId) throws SQLException {
         String sql = "DELETE FROM documents WHERE document_id = ?";
         try (Connection conn = DBContext.getConnection();
@@ -116,6 +143,21 @@ public class DocumentDAO {
         d.setMimeType(rs.getString("mime_type"));
         d.setStatus(rs.getString("status"));
         d.setUploadedAt(rs.getTimestamp("uploaded_at"));
+
+        try {
+            long reviewedBy = rs.getLong("reviewed_by");
+            d.setReviewedBy(rs.wasNull() ? null : reviewedBy);
+        } catch (SQLException ignored) {
+        }
+        try {
+            d.setReviewedAt(rs.getTimestamp("reviewed_at"));
+        } catch (SQLException ignored) {
+        }
+        try {
+            d.setRejectReason(rs.getString("reject_reason"));
+        } catch (SQLException ignored) {
+        }
+
         return d;
     }
 }

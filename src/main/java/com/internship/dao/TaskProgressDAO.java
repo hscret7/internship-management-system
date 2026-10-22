@@ -51,7 +51,7 @@ public class TaskProgressDAO {
 
     public List<TaskProgress> findByAssignment(Connection connection, long assignmentId) throws SQLException {
         String sql = """
-                SELECT * FROM task_progress
+                SELECT task_progress.*, UNIX_TIMESTAMP(task_progress.created_at) AS created_at_epoch FROM task_progress
                 WHERE assignment_id = ?
                 ORDER BY progress_id ASC
                 """;
@@ -68,7 +68,7 @@ public class TaskProgressDAO {
     }
 
     private TaskProgress findById(Connection connection, long progressId) throws SQLException {
-        String sql = "SELECT * FROM task_progress WHERE progress_id = ?";
+        String sql = "SELECT task_progress.*, UNIX_TIMESTAMP(task_progress.created_at) AS created_at_epoch FROM task_progress WHERE progress_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, progressId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -83,9 +83,9 @@ public class TaskProgressDAO {
         progress.setAssignmentId(resultSet.getLong("assignment_id"));
         progress.setNote(resultSet.getString("note"));
         progress.setCompletionPercentage(resultSet.getInt("completion_percentage"));
-        Timestamp createdAt = resultSet.getTimestamp("created_at");
+        java.time.LocalDateTime createdAt = com.internship.util.SqlTime.utcLocal(resultSet, "created_at");
         if (createdAt != null) {
-            progress.setCreatedAt(createdAt.toLocalDateTime());
+            progress.setCreatedAt(createdAt);
         }
         return progress;
     }

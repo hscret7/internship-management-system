@@ -27,15 +27,15 @@
                 <label class="form-label" for="taskTitle">Tên nhiệm vụ</label>
                 <input class="form-control mb-3" id="taskTitle" name="title" maxlength="255" required>
                 <label class="form-label" for="taskDescription">Mô tả</label>
-                <textarea class="form-control mb-3" id="taskDescription" name="description" rows="3"></textarea>
+                <textarea class="form-control mb-3" id="taskDescription" name="description" rows="3" maxlength="10000" required></textarea>
                 <label class="form-label" for="taskDueDate">Hạn hoàn thành</label>
-                <input class="form-control mb-3" id="taskDueDate" name="dueDate" type="date">
+                <input class="form-control mb-3" id="taskDueDate" name="dueDate" type="date" required>
                 <button class="btn btn-primary" type="submit">Tạo và giao cho TTS đã chọn</button>
             </form>
         </div>
         <div class="fe3-panel">
             <h2>Giao lại task đã tạo</h2>
-            <p class="text-muted">Nếu tạo task thành công nhưng giao bị lỗi, nhập mã task để thử lại.</p>
+            <p class="text-muted">Dùng cho task cũ chưa được giao. Task mới được tạo và giao trong cùng một lần lưu.</p>
             <form id="taskAssignForm">
                 <label class="form-label" for="taskId">Mã task</label>
                 <input class="form-control mb-3" id="taskId" name="taskId" type="number" min="1" required>

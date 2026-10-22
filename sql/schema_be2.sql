@@ -7,6 +7,9 @@
 CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE internship_management;
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+SET CHARACTER SET utf8mb4;
+
 -- 1. Bảng roles (Đã được tạo bởi BE1)
 -- 2. Bảng users (Đã được tạo bởi BE1, user_id là BIGINT)
 
@@ -55,8 +58,12 @@ CREATE TABLE IF NOT EXISTS documents (
     file_size BIGINT NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
     status VARCHAR(30) DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
+    reviewed_by BIGINT NULL,
+    reviewed_at TIMESTAMP NULL,
+    reject_reason TEXT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (profile_id) REFERENCES intern_profiles(profile_id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(user_id) ON DELETE SET NULL,
     INDEX idx_profile_doc (profile_id, document_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

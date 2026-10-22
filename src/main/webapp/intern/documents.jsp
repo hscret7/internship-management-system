@@ -11,6 +11,12 @@
 --%>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+
+<%-- Chốt locale cho fmt:* theo quy ước của intern/contract.jsp. Thiếu dòng này,
+     request không có Accept-Language (curl, bot, một số proxy) làm JSTL rơi về
+     value.toString() và dung lượng ra "1024.0 KB" thay vì "1024 KB". --%>
+<fmt:setLocale value="vi_VN" />
 
 <div class="card mb-4">
     <div class="card-header">
@@ -34,6 +40,7 @@
         <c:otherwise>
             <form action="${ctx}/document/upload" method="post"
                   enctype="multipart/form-data" data-validate-upload>
+    <input type="hidden" name="csrfToken" value="${csrfToken}" />
 
                 <div class="card-body">
 
@@ -97,17 +104,39 @@
                                     <c:out value="${doc.fileName}" />
                                 </span>
                                 <span class="file-list__meta">
-                                    <c:out value="${doc.documentType}" />
+                                    <%-- Nhan tieng Viet cho documentType (CV | APPLICATION_LETTER |
+                                         OTHER). Truoc day in thang ma enum nen TTS doc ra
+                                         "APPLICATION_LETTER"; dung dung bo tu voi o chon loai
+                                         tai lieu ngay ben tren. --%>
+                                    <c:choose>
+                                        <c:when test="${doc.documentType eq 'CV'}">CV / sơ yếu lý lịch</c:when>
+                                        <c:when test="${doc.documentType eq 'APPLICATION_LETTER'}">Đơn xin thực tập</c:when>
+                                        <c:when test="${doc.documentType eq 'OTHER'}">Tài liệu khác</c:when>
+                                        <c:otherwise><c:out value="${doc.documentType}" /></c:otherwise>
+                                    </c:choose>
                                     <span class="mx-1">-</span>
-                                    ${doc.fileSize / 1024} KB
+                                    <%-- file_size la so byte nguyen; EL phep chia luon tra ve
+                                         Double nen ban cu in ra "1024.0 KB" (va "1234.5678 KB" voi
+                                         file le byte). Da sua o contract.jsp, cho nay con sot. --%>
+                                    <fmt:formatNumber value="${doc.fileSize / 1024}" maxFractionDigits="0" /> KB
                                 </span>
+                                <c:if test="${doc.status eq 'REJECTED' and not empty doc.rejectReason}">
+                                    <div class="small text-danger mt-1">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Lý do từ chối: <c:out value="${doc.rejectReason}" />
+                                    </div>
+                                </c:if>
                             </div>
 
                             <span class="badge-status
                                 ${doc.status eq 'APPROVED' ? 'badge-status--ok'
                                   : (doc.status eq 'REJECTED' ? 'badge-status--bad'
                                   : 'badge-status--pending')}">
-                                <c:out value="${doc.status}" />
+                                <c:choose>
+                                    <c:when test="${doc.status eq 'PENDING'}">Chờ duyệt</c:when>
+                                    <c:when test="${doc.status eq 'APPROVED'}">Đã duyệt</c:when>
+                                    <c:when test="${doc.status eq 'REJECTED'}">Đã từ chối</c:when>
+                                    <c:otherwise><c:out value="${doc.status}" /></c:otherwise>
+                                </c:choose>
                             </span>
 
                             <a href="${ctx}/document/download?id=${doc.documentId}"

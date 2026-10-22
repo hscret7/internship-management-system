@@ -12,7 +12,11 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
 <c:set var="pageTitle" value="Hồ sơ cá nhân" />
-<c:set var="activePage" value="profile" />
+<%-- Trang nay phuc vu 2 muc menu: "Hồ sơ cá nhân" (/intern/profile) va
+     "Tài liệu của tôi" (/intern/profile?view=documents#documents).
+     Trinh duyet KHONG gui phan #documents len server, nen neu chi dua vao
+     fragment thi server khong the biet dang o muc nao - phai dung query param. --%>
+<c:set var="activePage" value="${param.view eq 'documents' ? 'documents' : 'profile'}" />
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
 
 <div class="page-head">
@@ -24,6 +28,12 @@
     </div>
 </div>
 
+<div class="alert alert-info">
+    <strong>Lưu hồ sơ chưa phải là duyệt thực tập.</strong>
+    Sau khi hoàn thiện hồ sơ/tài liệu, <a href="${ctx}/intern/applications">nộp đơn ứng tuyển</a>.
+    Đơn mới chờ HR xét duyệt; chỉ sau đó HR mới ghi danh bạn vào chương trình.
+    <c:if test="${not empty myApplications}">Đơn gần nhất: <strong><c:out value="${myApplications[0].status}"/></strong>.</c:if>
+</div>
 <div class="row g-4">
 
     <div class="col-lg-7">

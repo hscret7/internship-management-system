@@ -1,6 +1,7 @@
 package com.internship.model;
 
 import java.io.Serializable;
+import java.sql.Date;
 import java.sql.Timestamp;
 
 /**
@@ -25,6 +26,16 @@ public class ProgramEnrollment implements Serializable {
     private String programName;
     private String currentMentorName;
     private Integer currentMentorId;
+    private String departmentName;
+    private Date startDate;
+    private Date endDate;
+
+    public String getDepartmentName() { return departmentName; }
+    public void setDepartmentName(String value) { departmentName = value; }
+    public Date getStartDate() { return startDate; }
+    public void setStartDate(Date value) { startDate = value; }
+    public Date getEndDate() { return endDate; }
+    public void setEndDate(Date value) { endDate = value; }
 
     public ProgramEnrollment() {
     }

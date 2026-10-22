@@ -50,11 +50,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${pageTitle} - Internship Management System</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="${ctx}/assets/css/app.css" rel="stylesheet">
+    <link href="${ctx}/assets/css/app.css?v=20261019-khanh-base" rel="stylesheet">
     <c:if test="${not empty pageStylesheet}">
-        <link href="${ctx}/assets/css/${pageStylesheet}" rel="stylesheet">
+        <link href="${ctx}/assets/css/${pageStylesheet}?v=20261019-khanh-base" rel="stylesheet">
     </c:if>
 </head>
 <body>
@@ -77,6 +80,60 @@
             <div class="app-topbar__spacer"></div>
 
             <c:if test="${not empty sessionScope.currentUser}">
+
+                <%--
+                    ======================= CHUONG THONG BAO (US36) =======================
+                    Owner: FE1. Dat o header dung chung nen CA 4 VAI TRO deu thay.
+                    Hien thi: so chua doc + danh sach + danh dau da doc.
+
+                    Du lieu lay tu GET ${ctx}/notifications?page=1&size=8 (hop dong
+                    docs/BE1_US36_INAPP_CONTRACT.md). Luu y ve quyen: /notifications
+                    KHONG nam duoi /admin|/hr|/mentor|/intern nen AuthorizationFilter
+                    khong chan theo vai tro; NotificationServlet chi doi co session
+                    currentUser. Vi vay chuong nay dung duoc cho ca 4 vai tro.
+
+                    HAI DIEU DE LAM SAI, da tranh san o notifications-bell.js:
+                      1) Phien het han -> AuthenticationFilter redirect ve trang HTML
+                         dang nhap voi HTTP 200. Phai kiem tra Content-Type la JSON chu
+                         KHONG chi kiem tra response.ok.
+                      2) title/body do nguoi dung nhap (tieu de cuoc hop...) -> chi do
+                         bang textContent, KHONG dung innerHTML.
+
+                    Mac dinh inapp.notifications.enabled=false: luc do endpoint tra 503
+                    -> chuong an badge va hien dong "chua bat", khong bao loi do.
+                    Khong co endpoint "danh dau tat ca da doc" -> chi danh dau tung cai.
+                --%>
+                <div class="app-bell" id="appBell" data-context="${ctx}">
+                    <button type="button" class="app-bell__btn" id="appBellBtn"
+                            aria-haspopup="dialog" aria-expanded="false" aria-controls="appBellPanel"
+                            aria-label="Thông báo">
+                        <i class="bi bi-bell" aria-hidden="true"></i>
+                        <span class="app-bell__badge" id="appBellBadge" hidden></span>
+                    </button>
+
+                    <div class="app-bell__panel" id="appBellPanel" role="dialog"
+                         aria-label="Danh sách thông báo" hidden>
+                        <div class="app-bell__head">
+                            <span class="app-bell__title">Thông báo</span>
+                            <span class="app-bell__tools">
+                                <button type="button" class="app-bell__icon-btn" id="appBellReload"
+                                        title="Tải lại" aria-label="Tải lại danh sách thông báo">
+                                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="app-bell__icon-btn" id="appBellClose"
+                                        title="Đóng" aria-label="Đóng danh sách thông báo">
+                                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <%-- Dong trang thai mac dinh nam trong HTML: nguoi dung van thay
+                             phan hoi dung khi JS loi hoac bi chan. JS se thay the. --%>
+                        <div class="app-bell__body" id="appBellBody" aria-live="polite">
+                            <p class="app-bell__hint">Đang tải…</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="app-user">
                     <span class="app-user__avatar" aria-hidden="true">
                         <c:choose>
@@ -105,7 +162,12 @@
                         Allowed. Bắt buộc phải là form POST như dưới đây.
                         Không thêm doGet vào LogoutServlet (file của BE1).
                     --%>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="Đổi mật khẩu">
+                        <i class="bi bi-key"></i>
+                        <span class="d-none d-md-inline ms-1">Đổi MK</span>
+                    </button>
                     <form action="${ctx}/auth/logout" method="post" class="m-0">
+                        <input type="hidden" name="csrfToken" value="<%= com.internship.util.CsrfToken.expose(request) %>">
                         <button type="submit" class="btn btn-outline-brand btn-sm">
                             <i class="bi bi-box-arrow-right"></i>
                             <span class="d-none d-sm-inline ms-1">Đăng xuất</span>
@@ -117,10 +179,22 @@
 
         <main class="app-content">
 
+            <%--
+                BA KENH THONG BAO - LUON PHAI QUA <c:out>.
+                flashSuccess/flashError/errorMessage duoc BE dat bang
+                setAttribute tu nhieu servlet, trong do co chuoi sinh ra tu
+                du lieu DB (vi du ContractServlet dat "Loi CSDL: " +
+                e.getMessage()). Neu in thang ${...} thi HTML trong chuoi do
+                duoc trinh duyet dien giai -> stored XSS. Da ra soat 41 cho
+                set: khong cho nao co y dua the HTML vao, nen escape khong
+                lam mat dinh dang nao.
+                KHONG doi lai thanh ${...} khi sua file nay.
+            --%>
+
             <c:if test="${not empty sessionScope.flashSuccess}">
                 <div class="alert alert-success d-flex align-items-start gap-2" role="alert">
                     <i class="bi bi-check-circle-fill mt-1"></i>
-                    <div class="flex-grow-1">${sessionScope.flashSuccess}</div>
+                    <div class="flex-grow-1"><c:out value="${sessionScope.flashSuccess}" /></div>
                     <button type="button" class="btn-close" data-dismiss="alert" aria-label="Đóng"></button>
                 </div>
                 <c:remove var="flashSuccess" scope="session" />
@@ -129,7 +203,7 @@
             <c:if test="${not empty sessionScope.flashError}">
                 <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
                     <i class="bi bi-exclamation-triangle-fill mt-1"></i>
-                    <div class="flex-grow-1">${sessionScope.flashError}</div>
+                    <div class="flex-grow-1"><c:out value="${sessionScope.flashError}" /></div>
                     <button type="button" class="btn-close" data-dismiss="alert" aria-label="Đóng"></button>
                 </div>
                 <c:remove var="flashError" scope="session" />
@@ -138,7 +212,7 @@
             <c:if test="${not empty errorMessage}">
                 <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
                     <i class="bi bi-exclamation-octagon-fill mt-1"></i>
-                    <div class="flex-grow-1">${errorMessage}</div>
+                    <div class="flex-grow-1"><c:out value="${errorMessage}" /></div>
                     <button type="button" class="btn-close" data-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </c:if>

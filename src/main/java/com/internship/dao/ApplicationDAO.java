@@ -1,11 +1,16 @@
 package com.internship.dao;
 
 import com.internship.model.Application;
+import com.internship.util.ConnectionProvider;
 import com.internship.util.DBContext;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.*;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ApplicationDAO: Xử lý CSDL cho bảng applications (BE3).
@@ -13,6 +18,15 @@ import java.util.List;
  * không tạo lại bảng.
  */
 public class ApplicationDAO {
+    private final ConnectionProvider connections;
+
+    public ApplicationDAO() {
+        this(DBContext::getConnection);
+    }
+
+    public ApplicationDAO(ConnectionProvider connections) {
+        this.connections = Objects.requireNonNull(connections);
+    }
 
     /**
      * Tạo đơn ứng tuyển mới (trạng thái PENDING).
@@ -37,7 +51,7 @@ public class ApplicationDAO {
      * Overload: tạo đơn với connection tự quản lý.
      */
     public int createApplication(int internId) throws SQLException {
-        try (Connection conn = DBContext.getConnection()) {
+        try (Connection conn = connections.getConnection()) {
             return createApplication(internId, conn);
         }
     }
@@ -68,14 +82,16 @@ public class ApplicationDAO {
      */
     public Application getApplicationById(int applicationId) throws SQLException {
         String sql = """
-            SELECT a.*, ip.full_name AS intern_name, ip.email AS intern_email,
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch,
+                   ip.full_name AS intern_name, ip.email AS intern_email,
                    u.full_name AS reviewer_name
             FROM applications a
             JOIN intern_profiles ip ON a.intern_id = ip.profile_id
             LEFT JOIN users u ON a.reviewed_by = u.user_id
             WHERE a.application_id = ?
             """;
-        try (Connection conn = DBContext.getConnection();
+        try (Connection conn = connections.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, applicationId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -92,7 +108,9 @@ public class ApplicationDAO {
      */
     public Application getApplicationById(int applicationId, Connection conn) throws SQLException {
         String sql = """
-            SELECT a.*, ip.full_name AS intern_name, ip.email AS intern_email,
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch,
+                   ip.full_name AS intern_name, ip.email AS intern_email,
                    u.full_name AS reviewer_name
             FROM applications a
             JOIN intern_profiles ip ON a.intern_id = ip.profile_id
@@ -112,7 +130,11 @@ public class ApplicationDAO {
 
     public Application getApplicationByIdForUpdate(int applicationId, Connection conn)
             throws SQLException {
-        String sql = "SELECT * FROM applications WHERE application_id = ? FOR UPDATE";
+        String sql = """
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch
+            FROM applications a WHERE a.application_id = ? FOR UPDATE
+            """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, applicationId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -126,7 +148,7 @@ public class ApplicationDAO {
      */
     public boolean hasPendingApplication(int internId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM applications WHERE intern_id = ? AND status = 'PENDING'";
-        try (Connection conn = DBContext.getConnection();
+        try (Connection conn = connections.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, internId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -143,7 +165,9 @@ public class ApplicationDAO {
      */
     public List<Application> getPendingApplications() throws SQLException {
         String sql = """
-            SELECT a.*, ip.full_name AS intern_name, ip.email AS intern_email,
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch,
+                   ip.full_name AS intern_name, ip.email AS intern_email,
                    u.full_name AS reviewer_name
             FROM applications a
             JOIN intern_profiles ip ON a.intern_id = ip.profile_id
@@ -159,7 +183,9 @@ public class ApplicationDAO {
      */
     public List<Application> getAllApplications() throws SQLException {
         String sql = """
-            SELECT a.*, ip.full_name AS intern_name, ip.email AS intern_email,
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch,
+                   ip.full_name AS intern_name, ip.email AS intern_email,
                    u.full_name AS reviewer_name
             FROM applications a
             JOIN intern_profiles ip ON a.intern_id = ip.profile_id
@@ -174,7 +200,9 @@ public class ApplicationDAO {
      */
     public List<Application> getApplicationsByInternId(int internId) throws SQLException {
         String sql = """
-            SELECT a.*, ip.full_name AS intern_name, ip.email AS intern_email,
+            SELECT a.*, UNIX_TIMESTAMP(a.submitted_at) AS submitted_at_epoch,
+                   UNIX_TIMESTAMP(a.reviewed_at) AS reviewed_at_epoch,
+                   ip.full_name AS intern_name, ip.email AS intern_email,
                    u.full_name AS reviewer_name
             FROM applications a
             JOIN intern_profiles ip ON a.intern_id = ip.profile_id
@@ -183,7 +211,7 @@ public class ApplicationDAO {
             ORDER BY a.submitted_at DESC
             """;
         List<Application> list = new ArrayList<>();
-        try (Connection conn = DBContext.getConnection();
+        try (Connection conn = connections.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, internId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -237,7 +265,7 @@ public class ApplicationDAO {
 
     private List<Application> executeListQuery(String sql) throws SQLException {
         List<Application> list = new ArrayList<>();
-        try (Connection conn = DBContext.getConnection();
+        try (Connection conn = connections.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -252,12 +280,12 @@ public class ApplicationDAO {
         app.setApplicationId(rs.getInt("application_id"));
         app.setInternId(rs.getInt("intern_id"));
         app.setStatus(rs.getString("status"));
-        app.setSubmittedAt(rs.getTimestamp("submitted_at"));
+        app.setSubmittedAt(readInstantTimestamp(rs, "submitted_at_epoch"));
 
         long reviewedBy = rs.getLong("reviewed_by");
         app.setReviewedBy(rs.wasNull() ? null : reviewedBy);
 
-        app.setReviewedAt(rs.getTimestamp("reviewed_at"));
+        app.setReviewedAt(readInstantTimestamp(rs, "reviewed_at_epoch"));
         app.setRejectReason(rs.getString("reject_reason"));
 
         // Transient display fields (may not exist in all queries)
@@ -272,5 +300,24 @@ public class ApplicationDAO {
         } catch (SQLException ignored) { }
 
         return app;
+    }
+
+    /**
+     * Both application columns are MySQL TIMESTAMPs, not local DATETIMEs.
+     * UNIX_TIMESTAMP(column) returns their stored instant directly. Reading its
+     * decimal seconds avoids interpreting a timezone-less JDBC wire value with
+     * a potentially different connection/session/JVM timezone. Do not add seven
+     * hours or reinterpret the value as LocalDateTime; the FE chooses its zone.
+     */
+    private Timestamp readInstantTimestamp(ResultSet rs, String column) throws SQLException {
+        BigDecimal epoch = rs.getBigDecimal(column);
+        if (epoch == null) return null;
+        try {
+            long seconds = epoch.setScale(0, RoundingMode.FLOOR).longValueExact();
+            int nanos = epoch.subtract(BigDecimal.valueOf(seconds)).movePointRight(9).intValueExact();
+            return Timestamp.from(Instant.ofEpochSecond(seconds, nanos));
+        } catch (ArithmeticException | java.time.DateTimeException failure) {
+            throw new SQLException("Invalid application timestamp: " + column, failure);
+        }
     }
 }

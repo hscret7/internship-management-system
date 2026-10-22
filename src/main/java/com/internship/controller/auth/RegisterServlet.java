@@ -5,7 +5,6 @@ import java.io.IOException;
 import com.internship.dao.RoleDAO;
 import com.internship.dao.UserDAO;
 import com.internship.service.UserService;
-import com.internship.service.email.SmtpEmailService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -18,18 +17,19 @@ public class RegisterServlet extends HttpServlet {
 
     private UserService userService;
 
+    public RegisterServlet() {
+    }
+
+    public RegisterServlet(UserService userService) {
+        this.userService = userService;
+    }
+
     @Override
-    public void init() throws ServletException {
-        try {
+    public void init() {
+        if (userService == null) {
             userService = new UserService(
                     new UserDAO(),
-                    new RoleDAO(),
-                    new SmtpEmailService()
-            );
-        } catch (RuntimeException e) {
-            throw new ServletException(
-                    "Unable to initialize RegisterServlet.",
-                    e
+                    new RoleDAO()
             );
         }
     }
@@ -64,7 +64,11 @@ public class RegisterServlet extends HttpServlet {
                 email,
                 fullName,
                 password,
-                confirmPassword
+                confirmPassword,
+                request.getParameter("phone"),
+                request.getParameter("university"),
+                request.getParameter("major"),
+                request.getParameter("gpa")
         );
 
         request.getSession(true).setAttribute(

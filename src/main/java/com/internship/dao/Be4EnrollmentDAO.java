@@ -20,7 +20,8 @@ public class Be4EnrollmentDAO {
                 JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                 JOIN internship_programs p ON p.program_id = pe.program_id
                 JOIN intern_profiles ip ON ip.profile_id = pe.intern_profile_id
-                WHERE m.user_id = ? AND ma.ended_at IS NULL
+                WHERE m.user_id = ? AND (ma.ended_at IS NULL OR (pe.status IN ('COMPLETED','CANCELLED')
+                  AND ma.assignment_id = (SELECT MAX(last_ma.assignment_id) FROM mentor_assignments last_ma WHERE last_ma.enrollment_id=pe.enrollment_id)))
                 ORDER BY pe.enrolled_at DESC, pe.enrollment_id DESC
                 """;
         return list(connection, sql, mentorUserId);

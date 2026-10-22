@@ -14,7 +14,7 @@ import java.io.IOException;
 @WebServlet({
         "/mentor/dashboard", "/mentor/tasks", "/mentor/reports", "/mentor/evaluation",
         "/intern/tasks", "/intern/tasks/detail", "/intern/reports", "/intern/evaluation",
-        "/hr/evaluations"
+        "/hr/evaluations", "/hr/dashboard", "/hr/end-term-report", "/mentor/meetings"
 })
 public class Fe3PageServlet extends HttpServlet {
     @Override
@@ -43,6 +43,9 @@ public class Fe3PageServlet extends HttpServlet {
             case "/intern/reports" -> "/WEB-INF/views/intern/weekly-report.jsp";
             case "/intern/evaluation" -> "/WEB-INF/views/intern/evaluation.jsp";
             case "/hr/evaluations" -> "/WEB-INF/views/hr/evaluation-result.jsp";
+            case "/hr/dashboard" -> "/WEB-INF/views/hr/dashboard-overview.jsp";
+            case "/hr/end-term-report" -> "/WEB-INF/views/hr/end-term-report.jsp";
+            case "/mentor/meetings" -> "/WEB-INF/views/mentor/meetings.jsp";
             default -> null;
         };
         if (view == null) {

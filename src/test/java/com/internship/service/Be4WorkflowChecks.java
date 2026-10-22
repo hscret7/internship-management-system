@@ -157,7 +157,7 @@ public class Be4WorkflowChecks {
                     return switch (method.getName()) {
                         case "commit" -> { commits++; yield null; }
                         case "rollback" -> { rollbacks++; yield null; }
-                        case "setAutoCommit", "close" -> null;
+                        case "setAutoCommit", "setTransactionIsolation", "close" -> null;
                         case "getAutoCommit" -> false;
                         case "isClosed" -> false;
                         default -> throw new UnsupportedOperationException(method.getName());
@@ -237,6 +237,11 @@ public class Be4WorkflowChecks {
         boolean currentMentor = true;
         boolean activeMentor = true;
         boolean hr = true;
+
+        @Override
+        public void lockEnrollmentForMentorWrite(Connection connection, int enrollmentId) {
+            // Fake DAO: actual locking is covered by the opt-in MySQL regression tests.
+        }
 
         @Override
         public boolean isActiveInternOwner(Connection connection, long userId, int enrollmentId) {

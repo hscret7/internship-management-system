@@ -40,7 +40,7 @@ public class TaskAssignmentDAO {
     }
 
     private TaskAssignment find(Connection connection, long assignmentId, boolean lock) throws SQLException {
-        String sql = "SELECT * FROM task_assignments WHERE assignment_id = ?" + (lock ? " FOR UPDATE" : "");
+        String sql = "SELECT task_assignments.*, UNIX_TIMESTAMP(task_assignments.assigned_at) AS assigned_at_epoch, UNIX_TIMESTAMP(task_assignments.updated_at) AS updated_at_epoch FROM task_assignments WHERE assignment_id = ?" + (lock ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, assignmentId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -51,7 +51,7 @@ public class TaskAssignmentDAO {
 
     public List<TaskAssignment> findByEnrollment(Connection connection, int enrollmentId) throws SQLException {
         String sql = """
-                SELECT * FROM task_assignments
+                SELECT task_assignments.*, UNIX_TIMESTAMP(task_assignments.assigned_at) AS assigned_at_epoch, UNIX_TIMESTAMP(task_assignments.updated_at) AS updated_at_epoch FROM task_assignments
                 WHERE enrollment_id = ?
                 ORDER BY assigned_at DESC, assignment_id DESC
                 """;
@@ -85,13 +85,13 @@ public class TaskAssignmentDAO {
         assignment.setTaskId(resultSet.getLong("task_id"));
         assignment.setEnrollmentId(resultSet.getInt("enrollment_id"));
         assignment.setStatus(TaskAssignmentStatus.valueOf(resultSet.getString("status")));
-        Timestamp assignedAt = resultSet.getTimestamp("assigned_at");
+        java.time.LocalDateTime assignedAt = com.internship.util.SqlTime.utcLocal(resultSet, "assigned_at");
         if (assignedAt != null) {
-            assignment.setAssignedAt(assignedAt.toLocalDateTime());
+            assignment.setAssignedAt(assignedAt);
         }
-        Timestamp updatedAt = resultSet.getTimestamp("updated_at");
+        java.time.LocalDateTime updatedAt = com.internship.util.SqlTime.utcLocal(resultSet, "updated_at");
         if (updatedAt != null) {
-            assignment.setUpdatedAt(updatedAt.toLocalDateTime());
+            assignment.setUpdatedAt(updatedAt);
         }
         return assignment;
     }

@@ -57,10 +57,10 @@ Chạy theo thứ tự:
 |---|---|
 | **URL** | `/hr/enrollments` |
 | **GET Params** | `action=enroll-form&applicationId=<id>` (form chọn chương trình) |
-| **POST Params** | `action=enroll&applicationId=<id>&programId=<id>` |
+| **POST Params** | `action=enroll&applicationId=<id>&programId=<id>&mentorId=<optional id>` |
 | **Quyền** | HR hoặc ADMIN |
 | **Validation** | Application phải APPROVED; chưa có enrollment; intern chưa có enrollment ACTIVE; program ACTIVE; chưa đầy |
-| **Response** | Redirect → `/hr/enrollments` với session message chứa enrollmentId |
+| **Response** | Redirect → `/hr/enrollments?action=detail&id=<enrollmentId>` với session message; nếu phân mentor thất bại thì ghi danh vẫn tồn tại và có cảnh báo |
 
 ### 3a. Thiết lập danh mục – HR
 
@@ -69,6 +69,12 @@ Chạy theo thứ tự:
 `activate-program`, `create-mentor`. Chương trình mới ở trạng thái `PLANNED`, HR
 phải kích hoạt trước khi ghi danh. Mentor phải là tài khoản `MENTOR` đang hoạt động
 và thuộc cùng phòng ban với chương trình khi phân công.
+
+Sprint 2 bổ sung `update-program`, form sửa qua
+`GET /hr/catalog?action=edit-program&programId=<id>`, và bộ lọc `departmentId`.
+`/hr/programs` và `/hr/mentors` là alias tới cùng controller/dữ liệu, không phải
+các endpoint `/create` mà JSP FE cũ từng giả định. Chi tiết tham số và phối hợp FE
+nằm trong [BE3_SPRINT2_HANDOFF.md](BE3_SPRINT2_HANDOFF.md).
 
 Các form BE3 dùng token CSRF trong session (`csrfToken`); POST thiếu/sai token trả 403.
 
@@ -109,7 +115,7 @@ Các form BE3 dùng token CSRF trong session (`csrfToken`); POST thiếu/sai tok
 | **URL** | `/intern/enrollment` |
 | **Method** | GET |
 | **Quyền** | INTERN |
-| **Request attrs** | `enrollment` (ProgramEnrollment, nullable), `currentMentor` (MentorAssignment, nullable) |
+| **Request attrs** | `enrollment` (ProgramEnrollment, nullable, thêm `departmentName`, `startDate`, `endDate`), `currentMentor` (MentorAssignment, nullable) |
 
 ---
 
@@ -226,4 +232,5 @@ Trên một database test riêng, chạy `database/schema.sql`, `sql/schema_be2.
 5. INTERN chỉ thấy Enrollment của mình; thử POST thiếu/sai `csrfToken` phải trả 403.
 
 Các form tại `/hr/catalog` hiện là giao diện tối thiểu để QA kiểm thử tạo mới và
-kích hoạt. Chỉnh sửa/xóa danh mục và giao diện hoàn chỉnh thuộc đợt tích hợp FE sau.
+kích hoạt/sửa chương trình, lọc theo phòng ban và xem tải mentor. Thiết kế giao diện
+hoàn chỉnh do FE phụ trách; không có chức năng xóa chương trình trong phạm vi Sprint 2 đã chốt.

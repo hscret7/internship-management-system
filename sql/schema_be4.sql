@@ -16,7 +16,8 @@
 --   • mentors             (BE3) – mentor_id      (INT)
 --
 -- Chưa chạy được trên DB chỉ có BE1 vì thiếu bảng BE3.
--- SQL chưa được chạy thử trên database test.
+-- Regression SQL thật: mvn -Dbe4.mysql=true test (database tạm riêng).
+-- Sprint 2 giữ nguyên DDL và khóa enrollment_id; xem docs/BE4_SPRINT2_HANDOFF.md.
 --
 -- QUY ƯỚC ĐÃ CHỐT:
 --   • week_number: tuần thứ N trong đợt thực tập (enrollment), bắt đầu

@@ -1,6 +1,9 @@
 package com.internship.service;
 
 import java.security.SecureRandom;
+import java.util.Locale;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -8,6 +11,7 @@ import java.util.logging.Logger;
 import com.internship.dao.RoleDAO;
 import com.internship.dao.UserDAO;
 import com.internship.model.Role;
+import com.internship.model.RegistrationProfile;
 import com.internship.model.User;
 import com.internship.model.UserStatus;
 import com.internship.service.email.EmailException;
@@ -30,6 +34,17 @@ public class UserService {
     private final UserDAO userDAO;
     private final RoleDAO roleDAO;
     private final EmailService emailService;
+
+    public UserService(
+            UserDAO userDAO,
+            RoleDAO roleDAO
+    ) {
+        this(userDAO, roleDAO, (recipient, subject, content) -> {
+            throw new EmailException(
+                    "Email service is not configured for this operation."
+            );
+        });
+    }
 
     public UserService(
             UserDAO userDAO,
@@ -63,9 +78,9 @@ public class UserService {
         validateInput(username, email, fullName, roleName);
 
         String normalizedUsername = username.trim();
-        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         String normalizedFullName = fullName.trim();
-        String normalizedRole = roleName.trim().toUpperCase();
+        String normalizedRole = roleName.trim().toUpperCase(Locale.ROOT);
 
         try {
             if (userDAO.existsByUsername(normalizedUsername)) {
@@ -144,6 +159,35 @@ public class UserService {
         }
     }
 
+    /** Changes only the authenticated actor's password; never trust a submitted user ID. */
+    public void changePassword(long userId, String currentPassword, String newPassword,
+            String confirmPassword) throws SQLException {
+        if (userId <= 0 || currentPassword == null || currentPassword.isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập mật khẩu hiện tại.");
+        }
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 8 ký tự.");
+        }
+        if (newPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("Mật khẩu mới tối đa 72 byte UTF-8.");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp.");
+        }
+        User user = userDAO.findById(userId);
+        if (user == null || user.getStatus() != UserStatus.ACTIVE
+                || !PasswordUtil.verifyPassword(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không đúng hoặc tài khoản không khả dụng.");
+        }
+        if (PasswordUtil.verifyPassword(newPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Mật khẩu mới phải khác mật khẩu hiện tại.");
+        }
+        String newHash = PasswordUtil.hashPassword(newPassword);
+        if (!userDAO.changePasswordIfCurrent(userId, user.getPasswordHash(), newHash)) {
+            throw new IllegalArgumentException("Thông tin tài khoản đã thay đổi. Vui lòng đăng nhập lại và thử lại.");
+        }
+    }
+
     public User registerIntern(
             String username,
             String email,
@@ -151,6 +195,22 @@ public class UserService {
             String password,
             String confirmPassword
     ) {
+        return registerInternInternal(username, email, fullName, password, confirmPassword, null);
+    }
+
+    public User registerIntern(String username, String email, String fullName,
+            String password, String confirmPassword, String phone, String university,
+            String major, String gpa) {
+        RegistrationProfile profile = RegistrationProfile.parse(phone, university, major, gpa);
+        if (fullName != null && fullName.trim().length() > 100
+                || email != null && email.trim().length() > 100) {
+            throw new IllegalArgumentException("Họ tên và email tối đa 100 ký tự cho hồ sơ thực tập.");
+        }
+        return registerInternInternal(username, email, fullName, password, confirmPassword, profile);
+    }
+
+    private User registerInternInternal(String username, String email, String fullName,
+            String password, String confirmPassword, RegistrationProfile profile) {
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException(
                     "Tên đăng nhập không được để trống."
@@ -163,7 +223,7 @@ public class UserService {
             );
         }
 
-        if (!email.contains("@")) {
+        if (!isValidEmail(email)) {
             throw new IllegalArgumentException(
                     "Email không hợp lệ."
             );
@@ -174,6 +234,8 @@ public class UserService {
                     "Họ tên không được để trống."
             );
         }
+
+        validateFieldLengths(username, email, fullName);
 
         if (password == null || password.length() < 8) {
             throw new IllegalArgumentException(
@@ -188,7 +250,7 @@ public class UserService {
         }
 
         String normalizedUsername = username.trim();
-        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         String normalizedFullName = fullName.trim();
 
         try {
@@ -223,7 +285,7 @@ public class UserService {
             user.setRole(internRole);
             user.setStatus(UserStatus.ACTIVE);
 
-            long userId = userDAO.create(user);
+            long userId = profile == null ? userDAO.create(user) : userDAO.createWithProfile(user, profile);
             user.setUserId(userId);
 
             return user;
@@ -267,10 +329,35 @@ public class UserService {
             );
         }
 
-        if (!email.contains("@")) {
+        validateFieldLengths(username, email, fullName);
+
+        if (!isValidEmail(email)) {
             throw new IllegalArgumentException(
                     "Invalid email format."
             );
+        }
+    }
+
+    private static void validateFieldLengths(String username, String email, String fullName) {
+        if (username.trim().length() > 100 || email.trim().length() > 255
+                || fullName.trim().length() > 150) {
+            throw new IllegalArgumentException("Thông tin tài khoản vượt quá độ dài cho phép.");
+        }
+    }
+
+    private static boolean isValidEmail(String email) {
+        String value = email.trim();
+        if (value.chars().anyMatch(Character::isWhitespace)
+                || value.contains("\r") || value.contains("\n")) {
+            return false;
+        }
+        try {
+            InternetAddress address = new InternetAddress(value, true);
+            address.validate();
+            return !address.isGroup() && address.getPersonal() == null
+                    && value.equals(address.getAddress());
+        } catch (AddressException e) {
+            return false;
         }
     }
 

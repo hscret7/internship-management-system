@@ -55,10 +55,7 @@ public class DocumentUploadServlet extends HttpServlet {
         }
 
         String path = request.getServletPath();
-        String uploadDir = getServletContext().getRealPath("/uploads");
-        if (uploadDir == null) {
-            uploadDir = System.getProperty("user.home") + File.separator + "internship_uploads";
-        }
+        String uploadDir = com.internship.util.PrivateFileStorage.root().toString();
 
         try {
             if ("/contract/upload".equals(path)) {
@@ -68,12 +65,12 @@ public class DocumentUploadServlet extends HttpServlet {
                 // US04: TTS Upload CV / Đơn xin thực tập
                 handleUploadDocument(request, response, currentUser, uploadDir);
             }
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             session.setAttribute("flashError", e.getMessage());
             redirectBack(request, response, path);
         } catch (SQLException e) {
             log("Lỗi CSDL khi upload file", e);
-            session.setAttribute("flashError", "Lỗi CSDL: " + e.getMessage());
+            session.setAttribute("flashError", "Không thể lưu tài liệu. Vui lòng thử lại.");
             redirectBack(request, response, path);
         }
     }
@@ -84,6 +81,10 @@ public class DocumentUploadServlet extends HttpServlet {
     private void handleUploadDocument(HttpServletRequest request, HttpServletResponse response, 
                                      User currentUser, String uploadDir) 
             throws SQLException, IOException, ServletException {
+        if (!DocumentService.isIntern(currentUser)) {
+            response.sendError(403);
+            return;
+        }
         InternProfile profile = profileService.getProfileByUserId(currentUser.getUserId());
         if (profile == null) {
             throw new IllegalArgumentException("Vui lòng tạo hồ sơ cá nhân trước khi tải lên tài liệu!");
@@ -124,7 +125,7 @@ public class DocumentUploadServlet extends HttpServlet {
 
         request.getSession().setAttribute("flashSuccess", "Tải lên hợp đồng thành công!");
         String redirectUrl = request.getParameter("redirectUrl");
-        if (redirectUrl != null && !redirectUrl.isEmpty()) {
+        if (redirectUrl != null && redirectUrl.startsWith(request.getContextPath() + "/hr/") && !redirectUrl.contains("\r") && !redirectUrl.contains("\n")) {
             response.sendRedirect(redirectUrl);
         } else {
             response.sendRedirect(request.getContextPath() + "/hr/interns");
@@ -133,7 +134,7 @@ public class DocumentUploadServlet extends HttpServlet {
 
     private void redirectBack(HttpServletRequest request, HttpServletResponse response, String path) throws IOException {
         String referer = request.getHeader("Referer");
-        if (referer != null && !referer.isEmpty()) {
+        if (referer != null && referer.startsWith(request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath() + "/")) {
             response.sendRedirect(referer);
         } else {
             response.sendRedirect(request.getContextPath() + ("/contract/upload".equals(path) ? "/hr/interns" : "/intern/profile"));

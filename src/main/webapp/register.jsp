@@ -11,19 +11,39 @@
     HỢP ĐỒNG ĐÃ CHỐT VỚI BE1 (US39/4.1) - đối chiếu RegisterServlet
     ----------------------------------------------------------------------------
     [1] Servlet nhận POST tại  ${ctx}/auth/register   (đã có trên develop)
-    [2] Tham số servlet THỰC SỰ đọc:
-            username, email, fullName, password, confirmPassword
-        => phone / university / major / gpa KHÔNG được đọc và KHÔNG được lưu.
-           Phần hồ sơ này chờ BE2 (bảng intern_profiles). Vì vậy 3 field
-           phone / university / major đã BỎ thuộc tính required: bắt người dùng
-           nhập bắt buộc rồi vứt đi là sai. Họ điền nốt ở trang Hồ sơ cá nhân.
-           Khi BE2 nối xong thì kiểm tra lại, có thể bật required trở lại.
+    [2] Tham số servlet THỰC SỰ đọc (CẬP NHẬT 10/10/2026 - BE1 đã sửa):
+            username, email, fullName, password, confirmPassword,
+            phone, university, major, gpa
+        => phone / university / major / gpa BÂY GIỜ ĐÃ ĐƯỢC LƯU THẬT vào
+           intern_profiles, trong CÙNG transaction với users (BE1:
+           RegisterServlet -> UserService.registerIntern 9 tham số -> UserDAO
+           insert users + intern_profiles, autoCommit=false, một commit).
+           Ghi chú cũ trong file này ("servlet chưa đọc field này", "chờ BE2")
+           đã SAI và đã được xoá.
+
+        Các field đó VẪN KHÔNG required - đúng thiết kế form hiện tại, không
+        phải vì "chưa lưu". Người dùng bổ sung nốt ở trang Hồ sơ cá nhân.
+
+        Giới hạn phải khớp với server (com.internship.model.RegistrationProfile
+        và UserService.registerIntern), nếu không người dùng sẽ bị từ chối sau
+        khi đã bấm Đăng ký:
+            fullName / email : tối đa 100 ký tự sau khi trim
+            phone            : tối đa 20 ký tự; nếu có thì chỉ gồm +, số, space,
+                               ( ) - và phải có 7-15 CHỮ SỐ
+            university       : tối đa 150 ký tự
+            major            : tối đa 100 ký tự
+            gpa              : 0-4, tối đa 2 chữ số thập phân, không làm tròn ngầm
+        Chuỗi optional để trống được lưu thành chuỗi rỗng cho các cột NOT NULL.
     [3] Đăng ký lỗi:   forward về /register.jsp kèm request attribute
                        "errorMessage" (đã xác nhận trong RegisterServlet)
     [4] Đăng ký đúng:  set session flashSuccess rồi redirect về ${ctx}/auth/login
                        => KHÔNG set sessionScope.user ở bước này; người dùng
                           phải đăng nhập lại. Đó là lý do trang này không đọc
                           session.
+    [5] Đăng ký lỗi: mọi ô đều được điền lại từ ${param.*} qua <c:out> nên vừa
+        giữ nguyên giá trị người dùng đã nhập vừa escape HTML. KHÔNG đổi
+        <c:out value='${param.x}' /> thành ${param.x} - đó là lỗ hổng XSS.
+        Riêng 2 ô mật khẩu CỐ Ý không điền lại.
     ----------------------------------------------------------------------------
     BƯỚC "NỘP HỒ SƠ" (Application) KHÔNG nằm ở đây.
     Việc tạo và nộp đơn ứng tuyển đã có endpoint riêng (/intern/applications).
@@ -45,7 +65,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="${ctx}/assets/css/app.css" rel="stylesheet">
+    <link href="${ctx}/assets/css/app.css?v=20261019-khanh-base" rel="stylesheet">
 </head>
 <body>
 
@@ -86,25 +106,54 @@
 
                 <div class="col-md-6">
                     <label class="form-label" for="email">Email <span class="req">*</span></label>
+                    <%-- maxlength 100 cho khớp UserService.registerIntern: quá 100
+                         ký tự thì bị từ chối với thông báo "Họ tên và email tối đa
+                         100 ký tự cho hồ sơ thực tập." --%>
                     <input type="email" id="email" name="email" class="form-control"
                            value="<c:out value='${param.email}' />"
-                           required autocomplete="email" maxlength="120"
+                           required autocomplete="email" maxlength="100"
                            placeholder="nam@student.edu.vn">
-                    <span class="form-text">Dùng để nhận thông báo từ hệ thống.</span>
+                    <span class="form-text">Tối đa 100 ký tự. Dùng để nhận thông báo từ hệ thống.</span>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label" for="password">Mật khẩu <span class="req">*</span></label>
-                    <input type="password" id="password" name="password" class="form-control"
-                           required autocomplete="new-password"
-                           minlength="8" maxlength="100" placeholder="Tối thiểu 8 ký tự">
+                    <div class="position-relative">
+                        <input type="password" id="password" name="password" class="form-control pe-5"
+                               required autocomplete="new-password"
+                               minlength="8" maxlength="72" placeholder="Tối thiểu 8 ký tự, tối đa 72 byte UTF-8">
+                        <button type="button" class="btn-toggle-password position-absolute end-0 top-50 translate-middle-y me-2 border-0 bg-transparent text-secondary p-1"
+                                tabindex="-1" title="Hiện/ẩn mật khẩu" aria-label="Hiện/ẩn mật khẩu"
+                                onclick="togglePasswordVisibility(this, event)"
+                                style="cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center;">
+                            <span class="pwd-toggle-icon" style="display: flex;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label" for="confirmPassword">Nhập lại mật khẩu <span class="req">*</span></label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control"
-                           required autocomplete="new-password"
-                           minlength="8" maxlength="100" placeholder="Nhập lại mật khẩu">
+                    <div class="position-relative">
+                        <input type="password" id="confirmPassword" name="confirmPassword" class="form-control pe-5"
+                               required autocomplete="new-password"
+                               minlength="8" maxlength="100" placeholder="Nhập lại mật khẩu">
+                        <button type="button" class="btn-toggle-password position-absolute end-0 top-50 translate-middle-y me-2 border-0 bg-transparent text-secondary p-1"
+                                tabindex="-1" title="Hiện/ẩn mật khẩu" aria-label="Hiện/ẩn mật khẩu"
+                                onclick="togglePasswordVisibility(this, event)"
+                                style="cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center;">
+                            <span class="pwd-toggle-icon" style="display: flex;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -125,34 +174,43 @@
                            required maxlength="100" placeholder="Nguyễn Văn Nam">
                 </div>
                 <div class="col-md-4">
-                    <%-- Không required: RegisterServlet chưa đọc field này, xem ghi chú đầu file --%>
+                    <%-- Không required (thiết kế form), nhưng CÓ được lưu - xem ghi chú [2].
+                         pattern ở đây chỉ chặn sớm những trường hợp rõ ràng sai; server
+                         còn đòi 7-15 CHỮ SỐ nên vẫn là nơi quyết định. --%>
                     <label class="form-label" for="phone">Số điện thoại</label>
                     <input type="tel" id="phone" name="phone" class="form-control"
                            value="<c:out value='${param.phone}' />"
-                           pattern="[0-9+ .()\-]{9,15}" placeholder="0912345678">
+                           maxlength="20" pattern="\+?[0-9 ()\-]{7,20}"
+                           title="7 đến 15 chữ số, có thể bắt đầu bằng dấu +"
+                           placeholder="0912345678">
                 </div>
             </div>
 
             <div class="row g-3 mb-4">
                 <div class="col-md-7">
-                    <%-- Không required: RegisterServlet chưa đọc field này --%>
+                    <%-- Không required (thiết kế form), nhưng CÓ được lưu - xem ghi chú [2] --%>
                     <label class="form-label" for="university">Trường đại học / cao đẳng</label>
                     <input type="text" id="university" name="university" class="form-control"
                            value="<c:out value='${param.university}' />"
                            maxlength="150" placeholder="Đại học Bách Khoa Hà Nội">
                 </div>
                 <div class="col-md-5">
-                    <%-- Không required: RegisterServlet chưa đọc field này --%>
+                    <%-- Không required (thiết kế form), nhưng CÓ được lưu - xem ghi chú [2] --%>
                     <label class="form-label" for="major">Chuyên ngành</label>
                     <input type="text" id="major" name="major" class="form-control"
                            value="<c:out value='${param.major}' />"
                            maxlength="100" placeholder="Công nghệ thông tin">
                 </div>
                 <div class="col-md-3">
+                    <%-- step=0.01 khớp luật server "[0-9]+(\.[0-9]{1,2})?": tối đa hai
+                         chữ số thập phân và không làm tròn ngầm. Không đặt maxlength vì
+                         thuộc tính này bị bỏ qua với input type="number". --%>
                     <label class="form-label" for="gpa">GPA (hệ 4)</label>
                     <input type="number" id="gpa" name="gpa" class="form-control"
                            value="<c:out value='${param.gpa}' />"
-                           step="0.01" min="0" max="4" placeholder="3.50">
+                           step="0.01" min="0" max="4" inputmode="decimal"
+                           title="Từ 0 đến 4, tối đa hai chữ số thập phân"
+                           placeholder="3.50">
                 </div>
             </div>
 
@@ -182,6 +240,6 @@
     </div>
 </div>
 
-<script src="${ctx}/assets/js/app.js"></script>
+<script src="${ctx}/assets/js/app.js?v=20261017-v3"></script>
 </body>
 </html>

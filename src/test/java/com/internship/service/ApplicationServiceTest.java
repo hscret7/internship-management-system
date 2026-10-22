@@ -150,6 +150,7 @@ class ApplicationServiceTest {
         boolean shouldThrow = false;
         String lastRecipient;
         String lastSubject;
+        String lastContent;
 
         @Override
         public void sendEmail(String recipient, String subject, String content) {
@@ -158,6 +159,7 @@ class ApplicationServiceTest {
             }
             lastRecipient = recipient;
             lastSubject = subject;
+            lastContent = content;
             sentEmails.add(recipient + "|" + subject);
         }
     }
@@ -317,6 +319,50 @@ class ApplicationServiceTest {
     @Nested
     @DisplayName("Email Notification Behavior")
     class EmailTests {
+
+        private Application pending() {
+            Application app = new Application();
+            app.setApplicationId(123); app.setInternId(1); app.setStatus("PENDING");
+            app.setInternEmail("be3-qa@example.invalid"); app.setInternName("TTS kiểm thử");
+            appDAO.addApplication(app); return app;
+        }
+
+        @Test void approvalEmailContainsCorrectRecipientNameAndApplicationId() throws SQLException {
+            Application app = pending();
+            service.approveApplication(app.getApplicationId(), 100L);
+            assertEquals("be3-qa@example.invalid", emailService.lastRecipient);
+            assertTrue(emailService.lastSubject.contains("được duyệt"));
+            assertTrue(emailService.lastContent.contains("TTS kiểm thử"));
+            assertTrue(emailService.lastContent.contains("123"));
+            assertTrue(emailService.lastContent.contains("DUYỆT"));
+            assertEquals(1, connections.commits.get());
+        }
+
+        @Test void rejectionEmailContainsReasonAndCorrectRecipient() throws SQLException {
+            Application app = pending();
+            service.rejectApplication(app.getApplicationId(), 100L, " Thiếu CV kiểm thử ");
+            assertEquals("be3-qa@example.invalid", emailService.lastRecipient);
+            assertTrue(emailService.lastSubject.contains("không được chấp nhận"));
+            assertTrue(emailService.lastContent.contains("123"));
+            assertTrue(emailService.lastContent.contains("Thiếu CV kiểm thử"));
+            assertEquals("REJECTED", app.getStatus());
+        }
+
+        @Test void rejectionEmailFailurePreservesDecisionReasonAndCommit() {
+            Application app = pending(); emailService.shouldThrow = true;
+            assertDoesNotThrow(() -> service.rejectApplication(123, 100L, "Thiếu CV kiểm thử"));
+            assertEquals("REJECTED", app.getStatus());
+            assertEquals("Thiếu CV kiểm thử", app.getRejectReason());
+            assertEquals(100L, app.getReviewedBy());
+            assertEquals(1, connections.commits.get()); assertEquals(0, connections.rollbacks.get());
+        }
+
+        @Test void emailIsInvokedOnlyAfterSuccessfulCommit() throws SQLException {
+            pending();
+            ApplicationService ordered = new ApplicationService(appDAO, profileDAO,
+                    (recipient, subject, content) -> assertEquals(1, connections.commits.get()), connections);
+            ordered.approveApplication(123, 100L);
+        }
 
         @Test
         @DisplayName("Email service failure is logged but does not throw")

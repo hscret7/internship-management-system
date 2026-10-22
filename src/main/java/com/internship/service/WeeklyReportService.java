@@ -39,13 +39,22 @@ public class WeeklyReportService {
             throw new IllegalArgumentException("Tuần thực tập phải bắt đầu từ 1");
         }
         try (Connection connection = connections.open()) {
-            requireInternOwner(connection, internUserId, enrollmentId);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            connection.setAutoCommit(false);
             try {
-                return reports.createDraft(connection, enrollmentId, weekNumber, content);
+                access.lockEnrollmentForMentorWrite(connection, enrollmentId);
+                requireInternOwner(connection, internUserId, enrollmentId);
+                WeeklyReport created = reports.createDraft(connection, enrollmentId, weekNumber, content);
+                connection.commit();
+                return created;
             } catch (SQLIntegrityConstraintViolationException exception) {
+                rollback(connection, exception);
                 if (exception.getErrorCode() == 1062) {
                     throw new IllegalStateException("Tuần này đã có báo cáo", exception);
                 }
+                throw exception;
+            } catch (SQLException | RuntimeException exception) {
+                rollback(connection, exception);
                 throw exception;
             }
         }
@@ -55,8 +64,10 @@ public class WeeklyReportService {
         requirePositive(internUserId, "internUserId");
         requirePositive(reportId, "reportId");
         try (Connection connection = connections.open()) {
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             connection.setAutoCommit(false);
             try {
+                lockLinkedEnrollment(connection, reportId);
                 WeeklyReport report = requireReportForUpdate(connection, reportId);
                 requireInternOwner(connection, internUserId, report.getEnrollmentId());
                 if (report.getStatus() != WeeklyReportStatus.DRAFT) {
@@ -77,8 +88,10 @@ public class WeeklyReportService {
         requirePositive(internUserId, "internUserId");
         requirePositive(reportId, "reportId");
         try (Connection connection = connections.open()) {
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             connection.setAutoCommit(false);
             try {
+                lockLinkedEnrollment(connection, reportId);
                 WeeklyReport report = requireReportForUpdate(connection, reportId);
                 requireInternOwner(connection, internUserId, report.getEnrollmentId());
                 if (report.getStatus() != WeeklyReportStatus.DRAFT) {
@@ -102,24 +115,30 @@ public class WeeklyReportService {
             throws SQLException {
         requirePositive(mentorUserId, "mentorUserId");
         requirePositive(reportId, "reportId");
-        if ((comment == null || comment.isBlank()) && rating == null) {
-            throw new IllegalArgumentException("Cần nhận xét hoặc điểm đánh giá");
+        if (comment == null || comment.isBlank() || comment.strip().length() > 10000) {
+            throw new IllegalArgumentException("Cần nhận xét từ 1 đến 10000 ký tự");
         }
         if (rating != null && (rating < 1 || rating > 5)) {
             throw new IllegalArgumentException("Điểm phản hồi phải từ 1 đến 5");
         }
         try (Connection connection = connections.open()) {
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             connection.setAutoCommit(false);
             try {
+                // Read only the stable enrollment link first; lock enrollment before report.
+                // The shared lock order matches BE3 mentor handover and avoids a stale check.
+                WeeklyReport linkedReport = reports.findById(connection, reportId);
+                if (linkedReport == null) throw new IllegalArgumentException("Không tìm thấy báo cáo");
+                access.lockEnrollmentForMentorWrite(connection, linkedReport.getEnrollmentId());
                 WeeklyReport report = requireReportForUpdate(connection, reportId);
                 if (!access.isCurrentMentor(connection, mentorUserId, report.getEnrollmentId())) {
                     throw new SecurityException("Mentor không phụ trách báo cáo này");
                 }
-                if (report.getStatus() != WeeklyReportStatus.SUBMITTED) {
+                if (report.getStatus() != WeeklyReportStatus.SUBMITTED && report.getStatus() != WeeklyReportStatus.REVIEWED) {
                     throw new IllegalStateException("Chỉ báo cáo đã nộp mới được phản hồi");
                 }
                 ReportFeedback created = feedback.create(connection, reportId, mentorUserId, comment, rating);
-                reports.markReviewed(connection, reportId);
+                if (report.getStatus() == WeeklyReportStatus.SUBMITTED) reports.markReviewed(connection, reportId);
                 connection.commit();
                 return created;
             } catch (SQLException | RuntimeException exception) {
@@ -147,7 +166,9 @@ public class WeeklyReportService {
             if (!access.isAssignedMentor(connection, mentorUserId, enrollmentId)) {
                 throw new SecurityException("Mentor không phụ trách đợt thực tập này");
             }
-            return reports.findByEnrollment(connection, enrollmentId);
+            // Authorization must hold at the server, not just a client-side filter.
+            return reports.findByEnrollment(connection, enrollmentId).stream()
+                    .filter(report -> report.getStatus() != WeeklyReportStatus.DRAFT).toList();
         }
     }
 
@@ -174,6 +195,12 @@ public class WeeklyReportService {
             throw new IllegalArgumentException("Không tìm thấy báo cáo");
         }
         return report;
+    }
+
+    private void lockLinkedEnrollment(Connection connection, long reportId) throws SQLException {
+        WeeklyReport linked = reports.findById(connection, reportId);
+        if (linked == null) throw new IllegalArgumentException("Không tìm thấy báo cáo");
+        access.lockEnrollmentForMentorWrite(connection, linked.getEnrollmentId());
     }
 
     private void requireInternOwner(Connection connection, long userId, int enrollmentId) throws SQLException {

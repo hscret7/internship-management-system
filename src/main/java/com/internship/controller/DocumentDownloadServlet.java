@@ -59,6 +59,8 @@ public class DocumentDownloadServlet extends HttpServlet {
             } else {
                 handleDownloadDocument(request, response, currentUser);
             }
+        } catch (NumberFormatException e) {
+            response.sendError(400, "Mã tài liệu không hợp lệ.");
         } catch (SQLException e) {
             log("Lỗi CSDL khi tải tài liệu", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi truy vấn cơ sở dữ liệu.");
@@ -127,28 +129,19 @@ public class DocumentDownloadServlet extends HttpServlet {
     private void streamFile(HttpServletRequest request, HttpServletResponse response, 
                            String relativePath, String originalFileName, String mimeType) 
             throws IOException {
-        String baseUploadDir = getServletContext().getRealPath("/");
-        if (baseUploadDir == null) {
-            baseUploadDir = System.getProperty("user.home") + File.separator + "internship_uploads";
-        }
-
-        Path filePath = Paths.get(baseUploadDir, relativePath);
-        if (!Files.exists(filePath)) {
-            // Thử kiểm tra ở thư mục uploads dự phòng
-            Path altPath = Paths.get(System.getProperty("user.home"), "internship_uploads", relativePath.replace("uploads/", ""));
-            if (Files.exists(altPath)) {
-                filePath = altPath;
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "File vật lý không tồn tại trên hệ thống lưu trữ.");
-                return;
-            }
+        Path filePath = com.internship.util.PrivateFileStorage.resolve(relativePath, getServletContext().getRealPath("/"));
+        if (!Files.isRegularFile(filePath)) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "File vật lý không tồn tại trên hệ thống lưu trữ.");
+            return;
         }
 
         response.setContentType(mimeType != null ? mimeType : "application/octet-stream");
         response.setContentLengthLong(Files.size(filePath));
 
         String encodedFileName = URLEncoder.encode(originalFileName, StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + originalFileName + "\"; filename*=UTF-8''" + encodedFileName);
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("Cache-Control", "private, no-store");
+        response.setHeader("Content-Disposition", "attachment; filename=\"download\"; filename*=UTF-8''" + encodedFileName);
 
         try (InputStream in = Files.newInputStream(filePath);
              OutputStream out = response.getOutputStream()) {

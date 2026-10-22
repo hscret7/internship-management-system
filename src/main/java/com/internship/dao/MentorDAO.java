@@ -12,6 +12,17 @@ import java.util.List;
  */
 public class MentorDAO {
 
+    public boolean hasMentorForUser(long userId) throws SQLException {
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT 1 FROM mentors WHERE user_id = ? LIMIT 1")) {
+            ps.setLong(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     public void lockMentor(int mentorId, Connection conn) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
                 "SELECT mentor_id FROM mentors WHERE mentor_id = ? FOR UPDATE")) {
@@ -57,7 +68,7 @@ public class MentorDAO {
     public Mentor getMentorById(int mentorId) throws SQLException {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
-                   (SELECT COUNT(*) FROM mentor_assignments ma
+                   (SELECT COUNT(DISTINCT ma.enrollment_id) FROM mentor_assignments ma
                     JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                     WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
                     AND pe.status = 'ACTIVE') AS current_mentee_count
@@ -85,7 +96,7 @@ public class MentorDAO {
     public Mentor getMentorById(int mentorId, Connection conn) throws SQLException {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
-                   (SELECT COUNT(*) FROM mentor_assignments ma
+                   (SELECT COUNT(DISTINCT ma.enrollment_id) FROM mentor_assignments ma
                     JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                     WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
                     AND pe.status = 'ACTIVE') AS current_mentee_count
@@ -109,7 +120,7 @@ public class MentorDAO {
     public List<Mentor> getActiveMentors() throws SQLException {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
-                   (SELECT COUNT(*) FROM mentor_assignments ma
+                   (SELECT COUNT(DISTINCT ma.enrollment_id) FROM mentor_assignments ma
                     JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                     WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
                     AND pe.status = 'ACTIVE') AS current_mentee_count
@@ -126,7 +137,7 @@ public class MentorDAO {
     public List<Mentor> getAllMentors() throws SQLException {
         String sql = """
             SELECT m.*, u.full_name, u.email, d.department_name,
-                   (SELECT COUNT(*) FROM mentor_assignments ma
+                   (SELECT COUNT(DISTINCT ma.enrollment_id) FROM mentor_assignments ma
                     JOIN program_enrollments pe ON pe.enrollment_id = ma.enrollment_id
                     WHERE ma.mentor_id = m.mentor_id AND ma.ended_at IS NULL
                     AND pe.status = 'ACTIVE') AS current_mentee_count

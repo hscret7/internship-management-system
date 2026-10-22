@@ -71,8 +71,10 @@ public class TaskService {
         requirePositive(taskId, "taskId");
         requirePositive(enrollmentId, "enrollmentId");
         try (Connection connection = connections.open()) {
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             connection.setAutoCommit(false);
             try {
+                access.lockEnrollmentForMentorWrite(connection, enrollmentId);
                 if (!access.isCurrentMentor(connection, mentorUserId, enrollmentId)) {
                     throw new SecurityException("Mentor không được phân cho đợt thực tập này");
                 }

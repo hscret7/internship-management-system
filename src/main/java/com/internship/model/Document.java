@@ -17,6 +17,9 @@ public class Document implements Serializable {
     private long fileSize;
     private String mimeType;
     private String status; // 'PENDING', 'APPROVED', 'REJECTED'
+    private Long reviewedBy;
+    private Timestamp reviewedAt;
+    private String rejectReason;
     private Timestamp uploadedAt;
 
     public Document() {
@@ -32,6 +35,23 @@ public class Document implements Serializable {
         this.fileSize = fileSize;
         this.mimeType = mimeType;
         this.status = status;
+        this.uploadedAt = uploadedAt;
+    }
+
+    public Document(int documentId, int profileId, String documentType, String fileName, 
+                    String filePath, long fileSize, String mimeType, String status, 
+                    Long reviewedBy, Timestamp reviewedAt, String rejectReason, Timestamp uploadedAt) {
+        this.documentId = documentId;
+        this.profileId = profileId;
+        this.documentType = documentType;
+        this.fileName = fileName;
+        this.filePath = filePath;
+        this.fileSize = fileSize;
+        this.mimeType = mimeType;
+        this.status = status;
+        this.reviewedBy = reviewedBy;
+        this.reviewedAt = reviewedAt;
+        this.rejectReason = rejectReason;
         this.uploadedAt = uploadedAt;
     }
 
@@ -107,6 +127,30 @@ public class Document implements Serializable {
         this.uploadedAt = uploadedAt;
     }
 
+    public Long getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(Long reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
+
+    public Timestamp getReviewedAt() {
+        return reviewedAt;
+    }
+
+    public void setReviewedAt(Timestamp reviewedAt) {
+        this.reviewedAt = reviewedAt;
+    }
+
+    public String getRejectReason() {
+        return rejectReason;
+    }
+
+    public void setRejectReason(String rejectReason) {
+        this.rejectReason = rejectReason;
+    }
+
     @Override
     public String toString() {
         return "Document{" +
@@ -116,6 +160,9 @@ public class Document implements Serializable {
                 ", fileName='" + fileName + '\'' +
                 ", fileSize=" + fileSize +
                 ", status='" + status + '\'' +
+                ", reviewedBy=" + reviewedBy +
+                ", reviewedAt=" + reviewedAt +
+                ", rejectReason='" + rejectReason + '\'' +
                 '}';
     }
 }

@@ -42,7 +42,7 @@ public class ReportFeedbackDAO {
     }
 
     public ReportFeedback findById(Connection connection, long feedbackId) throws SQLException {
-        String sql = "SELECT * FROM report_feedbacks WHERE feedback_id = ?";
+        String sql = "SELECT report_feedbacks.*, UNIX_TIMESTAMP(report_feedbacks.created_at) AS created_at_epoch FROM report_feedbacks WHERE feedback_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, feedbackId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -53,7 +53,7 @@ public class ReportFeedbackDAO {
 
     public List<ReportFeedback> findByReport(Connection connection, long reportId) throws SQLException {
         String sql = """
-                SELECT * FROM report_feedbacks WHERE report_id = ?
+                SELECT report_feedbacks.*, UNIX_TIMESTAMP(report_feedbacks.created_at) AS created_at_epoch FROM report_feedbacks WHERE report_id = ?
                 ORDER BY created_at ASC, feedback_id ASC
                 """;
         List<ReportFeedback> feedback = new ArrayList<>();
@@ -76,9 +76,9 @@ public class ReportFeedbackDAO {
         feedback.setComment(resultSet.getString("comment"));
         int rating = resultSet.getInt("rating");
         feedback.setRating(resultSet.wasNull() ? null : rating);
-        Timestamp createdAt = resultSet.getTimestamp("created_at");
+        java.time.LocalDateTime createdAt = com.internship.util.SqlTime.utcLocal(resultSet, "created_at");
         if (createdAt != null) {
-            feedback.setCreatedAt(createdAt.toLocalDateTime());
+            feedback.setCreatedAt(createdAt);
         }
         return feedback;
     }

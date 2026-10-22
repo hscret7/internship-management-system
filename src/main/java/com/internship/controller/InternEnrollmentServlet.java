@@ -29,10 +29,17 @@ public class InternEnrollmentServlet extends HttpServlet {
     private EnrollmentService enrollmentService;
     private InternProfileDAO internProfileDAO;
 
+    public InternEnrollmentServlet() { }
+
+    InternEnrollmentServlet(EnrollmentService service, InternProfileDAO profiles) {
+        enrollmentService = service;
+        internProfileDAO = profiles;
+    }
+
     @Override
     public void init() throws ServletException {
-        enrollmentService = new EnrollmentService();
-        internProfileDAO = new InternProfileDAO();
+        if (enrollmentService == null) enrollmentService = new EnrollmentService();
+        if (internProfileDAO == null) internProfileDAO = new InternProfileDAO();
     }
 
     /**
@@ -51,6 +58,7 @@ public class InternEnrollmentServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
+        response.setHeader("Cache-Control", "no-store");
 
         try {
             InternProfile profile = internProfileDAO.getProfileByUserId(currentUser.getUserId());
@@ -67,6 +75,8 @@ public class InternEnrollmentServlet extends HttpServlet {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error loading intern enrollment", e);
             request.setAttribute("errorMessage", "Lỗi tải thông tin ghi danh.");
+            request.setAttribute("enrollment", null);
+            request.setAttribute("currentMentor", null);
         }
 
         request.getRequestDispatcher("/WEB-INF/views/intern/enrollment.jsp")

@@ -27,6 +27,12 @@
     --border-strong: #c3ccd8;
     --text: #1b2430;
     --text-muted: #5d6b7a;
+    /* Bridge Bootstrap utilities to the same theme as the shared app shell. */
+    --bs-body-color: var(--text);
+    --bs-body-bg: var(--surface-sunken);
+    --bs-secondary-color: var(--text-muted);
+    --bs-secondary-color-rgb: 93, 107, 122;
+    --bs-border-color: var(--border);
 
     /* Sidebar (nen toi co dinh cho ca 4 role) */
     --sidebar-bg: #101a2b;
@@ -70,6 +76,7 @@
         --border-strong: #3a4a60;
         --text: #e6ebf2;
         --text-muted: #9aa8b8;
+        --bs-secondary-color-rgb: 154, 168, 184;
 
         --sidebar-bg: #0b1220;
         --sidebar-border: #1b2536;
@@ -89,11 +96,16 @@
 }
 
 /* ---------------------------------------------------------------- Base --- */
+@media (prefers-color-scheme: dark) {
+    .app-content .bg-light,
+    .app-content .bg-white { background-color: var(--surface) !important; }
+    .app-content .text-dark:not(.badge):not(.btn) { color: var(--text) !important; }
+}
 
 body {
     background: var(--surface-sunken);
     color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
         Arial, "Noto Sans", sans-serif;
     font-size: 15px;
     line-height: 1.55;
@@ -285,6 +297,280 @@ a:hover {
     color: var(--text);
     font-size: 19px;
     cursor: pointer;
+}
+
+/* ------------------------------------------------- Chuong thong bao (US36) ---
+   Nam trong header dung chung nen hien voi ca 4 vai tro. */
+
+.app-bell {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.app-bell__btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.app-bell__btn:hover,
+.app-bell__btn[aria-expanded="true"] {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+}
+
+.app-bell__btn:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+/* Badge la phan tu nho -> radius pill, khong dung --radius-sm. */
+.app-bell__badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+    background: var(--state-bad-fg);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+}
+
+.app-bell__badge[hidden],
+.app-bell__panel[hidden] {
+    display: none;
+}
+
+.app-bell__panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 40;
+    width: min(360px, calc(100vw - 32px));
+    max-height: min(460px, calc(100vh - 90px));
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.app-bell__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-sunken);
+}
+
+.app-bell__title {
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.app-bell__tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-bell__icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.app-bell__icon-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.app-bell__body {
+    overflow-y: auto;
+}
+
+.app-bell__hint {
+    margin: 0;
+    padding: 20px 14px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.app-bell__item {
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-bell__item:last-child {
+    border-bottom: 0;
+}
+
+/* Chua doc: vien trai mau accent + nen nhat. KHONG dung mau trang thai nghiep vu
+   (xanh/do/vang) vi day khong phai trang thai cua mot ban ghi. */
+.app-bell__item.is-unread {
+    background: var(--brand-soft);
+    box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.app-bell__item-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.app-bell__kind {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--brand-strong);
+}
+
+.app-bell__when {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-bell__item-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    /* Tieu de do nguoi dung nhap: cat bot thay vi keo dai vo han. */
+    overflow-wrap: anywhere;
+}
+
+.app-bell__item-body {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+    /* body do BE1 sinh ra co the chua '\n' (vd noi dung cuoc hop nhieu dong).
+       pre-line giu xuong dong nhung van tu wrap - an toan vi JS do bang textContent. */
+    white-space: pre-line;
+}
+
+.app-bell__mark {
+    margin-top: 7px;
+    padding: 2px 9px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.app-bell__mark:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.app-bell__mark:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
+/* ------------------------------------- Danh sach thong bao (trang US36) ---
+   Dung cho intern/notifications.jsp. Cung quy uoc voi chuong: chua doc = vien
+   trai mau accent + nen nhat, KHONG dung mau trang thai nghiep vu. */
+
+.notify-item {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.notify-item:last-child {
+    border-bottom: 0;
+}
+
+.notify-item.is-unread {
+    background: var(--brand-soft);
+    box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.notify-item__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.notify-item__when {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.notify-item__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    /* Tieu de do nguoi dung nhap: cat bot thay vi keo dai vo han. */
+    overflow-wrap: anywhere;
+}
+
+.notify-item__body {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+    /* Xem chu thich o .app-bell__item-body: giu xuong dong cua body do BE1 sinh ra. */
+    white-space: pre-line;
+}
+
+.notify-item__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.notify-item__source {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.notify-item__state {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .app-user {
@@ -564,6 +850,13 @@ a:hover {
 }
 
 .table {
+    --bs-table-bg: var(--surface);
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border);
+    --bs-table-striped-bg: var(--surface-sunken);
+    --bs-table-striped-color: var(--text);
+    --bs-table-hover-bg: var(--surface-hover);
+    --bs-table-hover-color: var(--text);
     margin: 0;
     color: var(--text);
     font-size: 14.5px;
@@ -579,6 +872,12 @@ a:hover {
     padding: 11px 16px;
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
+}
+
+.table .table-light {
+    --bs-table-bg: var(--surface-sunken);
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border);
 }
 
 .table > tbody td {
@@ -685,6 +984,69 @@ a:hover {
 
 .file-list__meta {
     font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------- Timeline --- */
+/* Dung cho man hinh "Chuong trinh thuc tap cua toi" (US14).
+   Thanh tien do chi hien thi - khong tuong tac, khong phu thuoc JS. */
+
+.timeline {
+    padding-top: 6px;
+}
+
+.timeline__track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.timeline__fill {
+    height: 100%;
+    background: var(--brand);
+    border-radius: 999px 0 0 999px;
+    transition: width .3s ease;
+}
+
+.timeline__fill--done {
+    background: var(--border-strong);
+}
+
+.timeline__marks {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.timeline__mark {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.timeline__mark--end {
+    text-align: right;
+}
+
+.timeline__label {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.timeline__value {
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.timeline__note {
+    margin: 10px 0 0;
+    font-size: 13px;
     color: var(--text-muted);
 }
 
@@ -847,4 +1209,16 @@ a:hover {
     .app-main {
         margin-inline-start: 0;
     }
+}
+
+/* Đảm bảo Modal luôn nổi trên Backdrop và click được 100% */
+.modal {
+    z-index: 1055 !important;
+}
+.modal-backdrop {
+    z-index: 1050 !important;
+}
+.modal-dialog {
+    z-index: 1056 !important;
+    position: relative;
 }

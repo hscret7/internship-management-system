@@ -63,6 +63,8 @@ public class ContractServlet extends HttpServlet {
 
             request.setAttribute("contract", contract);
             request.getRequestDispatcher("/intern/contract.jsp").forward(request, response);
+        } catch (NumberFormatException e) {
+            response.sendError(400, "Mã hợp đồng không hợp lệ.");
         } catch (SQLException e) {
             log("Lỗi CSDL khi xem hợp đồng", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi truy vấn cơ sở dữ liệu.");
@@ -97,13 +99,15 @@ public class ContractServlet extends HttpServlet {
 
             try {
                 int contractId = Integer.parseInt(contractIdStr);
-                documentService.confirmContract(contractId, currentUser);
+                String version = request.getParameter("fileVersion");
+                if (version == null || !version.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Vui lòng tải lại trang hợp đồng trước khi xác nhận.");
+                if (!documentService.confirmContract(contractId, currentUser, version)) throw new IllegalArgumentException("Hợp đồng đã thay đổi. Vui lòng tải lại.");
                 session.setAttribute("flashSuccess", "Bạn đã xác nhận hợp đồng thực tập thành công trên hệ thống!");
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | IllegalArgumentException e) {
                 session.setAttribute("flashError", e.getMessage());
             } catch (SQLException e) {
                 log("Lỗi CSDL khi xác nhận hợp đồng", e);
-                session.setAttribute("flashError", "Lỗi CSDL: " + e.getMessage());
+                session.setAttribute("flashError", "Không thể xác nhận hợp đồng. Vui lòng thử lại.");
             }
             response.sendRedirect(request.getContextPath() + "/contract/view");
         }

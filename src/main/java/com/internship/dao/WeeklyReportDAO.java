@@ -45,7 +45,7 @@ public class WeeklyReportDAO {
     }
 
     private WeeklyReport find(Connection connection, long reportId, boolean lock) throws SQLException {
-        String sql = "SELECT * FROM weekly_reports WHERE report_id = ?" + (lock ? " FOR UPDATE" : "");
+        String sql = "SELECT weekly_reports.*, UNIX_TIMESTAMP(weekly_reports.submitted_at) AS submitted_at_epoch, UNIX_TIMESTAMP(weekly_reports.created_at) AS created_at_epoch, UNIX_TIMESTAMP(weekly_reports.updated_at) AS updated_at_epoch FROM weekly_reports WHERE report_id = ?" + (lock ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, reportId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -56,7 +56,7 @@ public class WeeklyReportDAO {
 
     public List<WeeklyReport> findByEnrollment(Connection connection, int enrollmentId) throws SQLException {
         String sql = """
-                SELECT * FROM weekly_reports WHERE enrollment_id = ?
+                SELECT weekly_reports.*, UNIX_TIMESTAMP(weekly_reports.submitted_at) AS submitted_at_epoch, UNIX_TIMESTAMP(weekly_reports.created_at) AS created_at_epoch, UNIX_TIMESTAMP(weekly_reports.updated_at) AS updated_at_epoch FROM weekly_reports WHERE enrollment_id = ?
                 ORDER BY week_number ASC, report_id ASC
                 """;
         List<WeeklyReport> reports = new ArrayList<>();
@@ -108,17 +108,17 @@ public class WeeklyReportDAO {
         report.setWeekNumber(resultSet.getShort("week_number"));
         report.setContent(resultSet.getString("content"));
         report.setStatus(WeeklyReportStatus.valueOf(resultSet.getString("status")));
-        Timestamp submittedAt = resultSet.getTimestamp("submitted_at");
+        java.time.LocalDateTime submittedAt = com.internship.util.SqlTime.utcLocal(resultSet, "submitted_at");
         if (submittedAt != null) {
-            report.setSubmittedAt(submittedAt.toLocalDateTime());
+            report.setSubmittedAt(submittedAt);
         }
-        Timestamp createdAt = resultSet.getTimestamp("created_at");
+        java.time.LocalDateTime createdAt = com.internship.util.SqlTime.utcLocal(resultSet, "created_at");
         if (createdAt != null) {
-            report.setCreatedAt(createdAt.toLocalDateTime());
+            report.setCreatedAt(createdAt);
         }
-        Timestamp updatedAt = resultSet.getTimestamp("updated_at");
+        java.time.LocalDateTime updatedAt = com.internship.util.SqlTime.utcLocal(resultSet, "updated_at");
         if (updatedAt != null) {
-            report.setUpdatedAt(updatedAt.toLocalDateTime());
+            report.setUpdatedAt(updatedAt);
         }
         return report;
     }

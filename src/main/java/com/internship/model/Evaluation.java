@@ -9,6 +9,9 @@ public class Evaluation {
     private int enrollmentId;
     private int mentorId;
     private BigDecimal score;
+    // Sprint 3 criteria are distinct from the legacy score /100; never auto-convert.
+    private Integer skillScore;
+    private Integer attitudeScore;
     private String comment;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -65,6 +68,11 @@ public class Evaluation {
     public void setScore(BigDecimal score) {
         this.score = score;
     }
+
+    public Integer getSkillScore() { return skillScore; }
+    public void setSkillScore(Integer skillScore) { this.skillScore = skillScore; }
+    public Integer getAttitudeScore() { return attitudeScore; }
+    public void setAttitudeScore(Integer attitudeScore) { this.attitudeScore = attitudeScore; }
 
     public String getComment() {
         return comment;

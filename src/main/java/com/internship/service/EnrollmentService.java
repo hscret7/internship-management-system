@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * EnrollmentService: Nghiệp vụ ghi danh và phân mentor (BE3).
@@ -144,6 +145,29 @@ public class EnrollmentService {
     }
 
     // ========== Phân mentor ==========
+
+    /** Two committed steps: a failed mentor assignment must not undo the enrollment. */
+    public EnrollmentResult enrollInternWithMentor(int applicationId, int programId,
+                                                  Integer mentorId, long hrUserId)
+            throws SQLException {
+        int enrollmentId = enrollIntern(applicationId, programId, hrUserId);
+        if (mentorId == null) return new EnrollmentResult(enrollmentId, null, null);
+        try {
+            int assignmentId = assignMentor(enrollmentId, mentorId, hrUserId);
+            return new EnrollmentResult(enrollmentId, assignmentId, null);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return new EnrollmentResult(enrollmentId, null,
+                    "Đã ghi danh nhưng chưa phân mentor: " + e.getMessage()
+                            + " Hãy phân mentor trên ghi danh hiện có, không ghi danh lại.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Mentor assignment failed after enrollment " + enrollmentId, e);
+            return new EnrollmentResult(enrollmentId, null,
+                    "Đã ghi danh nhưng lỗi lưu phân mentor. Hãy tải lại chi tiết và phân mentor "
+                            + "trên ghi danh hiện có, không ghi danh lại.");
+        }
+    }
+
+    public record EnrollmentResult(int enrollmentId, Integer assignmentId, String mentorWarning) { }
 
     /**
      * HR phân mentor cho enrollment.

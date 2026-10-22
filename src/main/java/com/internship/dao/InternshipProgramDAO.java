@@ -13,13 +13,18 @@ import java.util.List;
 public class InternshipProgramDAO {
 
     public int createProgram(InternshipProgram program) throws SQLException {
+        try (Connection conn = DBContext.getConnection()) {
+            return createProgram(program, conn);
+        }
+    }
+
+    public int createProgram(InternshipProgram program, Connection conn) throws SQLException {
         String sql = """
             INSERT INTO internship_programs
                 (program_name, department_id, description, start_date, end_date, max_interns, status)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
-        try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, program.getProgramName());
             ps.setInt(2, program.getDepartmentId());
             ps.setString(3, program.getDescription());
@@ -113,14 +118,19 @@ public class InternshipProgramDAO {
     }
 
     public boolean updateProgram(InternshipProgram program) throws SQLException {
+        try (Connection conn = DBContext.getConnection()) {
+            return updateProgram(program, conn);
+        }
+    }
+
+    public boolean updateProgram(InternshipProgram program, Connection conn) throws SQLException {
         String sql = """
             UPDATE internship_programs
             SET program_name = ?, department_id = ?, description = ?,
                 start_date = ?, end_date = ?, max_interns = ?, status = ?
             WHERE program_id = ?
             """;
-        try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, program.getProgramName());
             ps.setInt(2, program.getDepartmentId());
             ps.setString(3, program.getDescription());
@@ -140,6 +150,40 @@ public class InternshipProgramDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, programId);
             return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Caller holds the department lock, so concurrent creates/edits cannot race. */
+    public boolean hasEquivalentProgram(String normalizedName, int departmentId,
+                                        Date startDate, Date endDate, int excludedId,
+                                        Connection conn) throws SQLException {
+        String sql = """
+            SELECT 1 FROM internship_programs
+            WHERE LOWER(TRIM(REGEXP_REPLACE(program_name, '[[:space:]]+', ' ')))
+                    COLLATE utf8mb4_bin = ?
+              AND department_id = ? AND start_date = ? AND end_date = ?
+              AND program_id <> ? LIMIT 1
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, normalizedName);
+            ps.setInt(2, departmentId);
+            ps.setDate(3, startDate);
+            ps.setDate(4, endDate);
+            ps.setInt(5, excludedId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /** Even a completed/cancelled enrollment freezes the original date/department. */
+    public boolean hasAnyEnrollment(int programId, Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM program_enrollments WHERE program_id = ? LIMIT 1")) {
+            ps.setInt(1, programId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

@@ -1,13 +1,29 @@
-<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><title>Thiết lập thực tập</title></head>
-<body>
-<h1>Phòng ban, chương trình và mentor</h1>
-<p><a href="${pageContext.request.contextPath}/hr/enrollments">Quản lý ghi danh</a></p>
-<c:if test="${not empty successMessage}"><p><c:out value="${successMessage}"/></p></c:if>
-<c:if test="${not empty errorMessage}"><p><c:out value="${errorMessage}"/></p></c:if>
+<%-- Mentor UI owns its layout; the catalog keeps the restored HR layout. --%>
+<c:choose>
+<c:when test="${requestScope['jakarta.servlet.forward.servlet_path'] eq '/hr/mentors'}">
+    <jsp:include page="/WEB-INF/views/hr/mentors.jsp" />
+</c:when>
+<c:otherwise>
+<c:set var="pageTitle" value="Chương trình thực tập" />
+<c:set var="activePage" value="hr-catalog" />
+<c:set var="pageStylesheet" value="fe3.css" />
+<%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+<section class="fe3-page fe3-be3">
+    <div class="fe3-hero">
+        <div>
+            <span class="fe3-hero__eyebrow"><i class="bi bi-diagram-3"></i> CHƯƠNG TRÌNH</span>
+            <h2>Thiết lập thực tập</h2>
+            <p>Quản lý phòng ban, chương trình và mentor tại một nơi.</p>
+        </div>
+        <div class="fe3-hero__mark" aria-hidden="true"><i class="bi bi-diagram-3"></i></div>
+    </div>
+    <div class="fe3-be3__actions"><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/hr/enrollments">Quản lý ghi danh <i class="bi bi-arrow-right"></i></a></div>
+    <c:if test="${not empty successMessage}"><div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div></c:if>
+
+<div class="fe3-panel">
 
 <h2>Tạo phòng ban</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
@@ -18,6 +34,8 @@
     <button type="submit">Tạo phòng ban</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Tạo chương trình</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
     <input type="hidden" name="csrfToken" value="${csrfToken}"/>
@@ -35,8 +53,55 @@
     <button type="submit">Tạo chương trình PLANNED</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Chương trình</h2>
-<table border="1">
+<form method="get" action="${pageContext.request.contextPath}/hr/catalog">
+    <label>Lọc chương trình và mentor theo phòng ban:
+        <select name="departmentId">
+            <option value="">Tất cả phòng ban</option>
+            <c:forEach var="department" items="${departments}">
+                <option value="${department.departmentId}" ${selectedDepartmentId == department.departmentId ? 'selected' : ''}><c:out value="${department.departmentName}"/></option>
+            </c:forEach>
+        </select>
+    </label>
+    <button type="submit">Lọc</button>
+</form>
+<c:if test="${not empty editingProgram}">
+    <h3>Sửa chương trình #${editingProgram.programId}</h3>
+    <c:if test="${programStructureLocked}"><p>Đã có ghi danh: chỉ được sửa tên và mô tả.</p></c:if>
+    <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
+        <input type="hidden" name="csrfToken" value="${csrfToken}"/>
+        <input type="hidden" name="action" value="update-program"/>
+        <input type="hidden" name="programId" value="${editingProgram.programId}"/>
+        <label>Tên <input name="name" value="<c:out value='${editingProgram.programName}'/>" maxlength="200" required/></label>
+        <label>Mô tả <input name="description" value="<c:out value='${editingProgram.description}'/>"/></label>
+        <c:choose>
+            <c:when test="${programStructureLocked}">
+                <input type="hidden" name="departmentId" value="${editingProgram.departmentId}"/>
+                <input type="hidden" name="startDate" value="${editingProgram.startDate}"/>
+                <input type="hidden" name="endDate" value="${editingProgram.endDate}"/>
+                <input type="hidden" name="maxInterns" value="${editingProgram.maxInterns}"/>
+                <p>Phòng ban: <c:out value="${editingProgram.departmentName}"/>.
+                    Ngày: ${editingProgram.startDate} – ${editingProgram.endDate}.
+                    Sức chứa: ${editingProgram.maxInterns} (0 = không giới hạn).</p>
+            </c:when>
+            <c:otherwise>
+                <label>Phòng ban <select name="departmentId" required>
+                    <c:forEach var="department" items="${departments}">
+                        <option value="${department.departmentId}" ${editingProgram.departmentId == department.departmentId ? 'selected' : ''}><c:out value="${department.departmentName}"/></option>
+                    </c:forEach>
+                </select></label>
+                <label>Bắt đầu <input type="date" name="startDate" value="${editingProgram.startDate}" required/></label>
+                <label>Kết thúc <input type="date" name="endDate" value="${editingProgram.endDate}" required/></label>
+                <label>Sức chứa <input type="number" min="0" name="maxInterns" value="${editingProgram.maxInterns}" required/></label>
+            </c:otherwise>
+        </c:choose>
+        <button type="submit">Lưu chương trình</button>
+        <a href="${pageContext.request.contextPath}/hr/catalog">Hủy</a>
+    </form>
+</c:if>
+<div class="fe3-be3__table-scroll"><table>
     <tr><th>Tên</th><th>Phòng ban</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr>
     <c:forEach var="program" items="${programs}">
         <tr>
@@ -44,7 +109,9 @@
             <td><c:out value="${program.departmentName}"/></td>
             <td><c:out value="${program.startDate}"/> – <c:out value="${program.endDate}"/></td>
             <td><c:out value="${program.status}"/></td>
-            <td><c:if test="${program.status == 'PLANNED'}">
+            <td>
+                <a href="${pageContext.request.contextPath}/hr/catalog?action=edit-program&programId=${program.programId}">Sửa</a>
+                <c:if test="${program.status == 'PLANNED'}">
                 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
                     <input type="hidden" name="csrfToken" value="${csrfToken}"/>
                     <input type="hidden" name="action" value="activate-program"/>
@@ -54,8 +121,10 @@
             </c:if></td>
         </tr>
     </c:forEach>
-</table>
+</table></div>
 
+</div>
+<div class="fe3-panel">
 <h2>Thêm mentor</h2>
 <form method="post" action="${pageContext.request.contextPath}/hr/catalog">
     <input type="hidden" name="csrfToken" value="${csrfToken}"/>
@@ -70,22 +139,31 @@
             <option value="${department.departmentId}"><c:out value="${department.departmentName}"/></option>
         </c:forEach>
     </select></label>
-    <label>Chuyên môn <input name="specialization"/></label>
+    <label>Chuyên môn <input name="specialization" maxlength="200"/></label>
     <label>Số TTS tối đa <input type="number" min="1" name="maxMentees" value="5" required/></label>
     <button type="submit">Thêm mentor</button>
 </form>
 
+</div>
+<div class="fe3-panel">
 <h2>Mentor</h2>
-<table border="1">
-    <tr><th>Tên</th><th>Phòng ban</th><th>Chuyên môn</th><th>Đang hướng dẫn</th></tr>
+<div class="fe3-be3__table-scroll"><table>
+    <tr><th>Tên</th><th>Phòng ban</th><th>Chuyên môn</th><th>Trạng thái</th><th>Đang hướng dẫn</th><th>Chỗ còn lại</th><th>Tải</th></tr>
     <c:forEach var="mentor" items="${mentors}">
         <tr>
             <td><c:out value="${mentor.fullName}"/></td>
             <td><c:out value="${mentor.departmentName}"/></td>
             <td><c:out value="${mentor.specialization}"/></td>
+            <td><c:out value="${mentor.status}"/></td>
             <td>${mentor.currentMenteeCount}/${mentor.maxMentees}</td>
+            <td>${mentor.remainingCapacity}</td>
+            <td>${mentor.atCapacity ? 'Đã đầy' : 'Còn chỗ'}</td>
         </tr>
     </c:forEach>
-</table>
-</body>
-</html>
+</table></div>
+</div>
+</section>
+
+<%@ include file="/WEB-INF/views/common/footer.jsp" %>
+</c:otherwise>
+</c:choose>

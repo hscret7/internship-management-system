@@ -13,19 +13,27 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /** Minimal HR setup for departments, programs and mentor records. */
-@WebServlet("/hr/catalog")
+@WebServlet({"/hr/catalog", "/hr/programs", "/hr/mentors"})
 public class HRCatalogServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(HRCatalogServlet.class.getName());
     private CatalogService catalog;
 
+    public HRCatalogServlet() { }
+
+    HRCatalogServlet(CatalogService catalog) {
+        this.catalog = catalog;
+    }
+
     @Override
     public void init() {
-        catalog = new CatalogService();
+        if (catalog == null) catalog = new CatalogService();
     }
 
     @Override
@@ -37,10 +45,19 @@ public class HRCatalogServlet extends HttpServlet {
         }
         CsrfToken.expose(request);
         try {
+            Integer departmentId = optionalDepartment(request);
             request.setAttribute("departments", catalog.getDepartments());
-            request.setAttribute("programs", catalog.getPrograms());
-            request.setAttribute("mentors", catalog.getMentors());
+            request.setAttribute("programs", catalog.getPrograms(departmentId));
+            request.setAttribute("mentors", catalog.getMentors(departmentId));
+            request.setAttribute("selectedDepartmentId", departmentId);
             request.setAttribute("mentorUsers", catalog.getEligibleMentorUsers());
+            if ("edit-program".equals(request.getParameter("action"))) {
+                int id = positiveInt(request, "programId");
+                request.setAttribute("editingProgram", catalog.getProgram(id));
+                request.setAttribute("programStructureLocked", catalog.isProgramStructureLocked(id));
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            request.setAttribute("errorMessage", e.getMessage());
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Unable to load HR catalog", e);
             request.setAttribute("errorMessage", "Không thể tải dữ liệu thiết lập.");
@@ -77,6 +94,11 @@ public class HRCatalogServlet extends HttpServlet {
                         nonnegativeInt(request, "maxInterns"));
             } else if ("activate-program".equals(action)) {
                 catalog.activateProgram(positiveInt(request, "programId"));
+            } else if ("update-program".equals(action)) {
+                catalog.updateProgram(positiveInt(request, "programId"), request.getParameter("name"),
+                        positiveInt(request, "departmentId"), request.getParameter("description"),
+                        dateParam(request, "startDate"), dateParam(request, "endDate"),
+                        nonnegativeInt(request, "maxInterns"));
             } else if ("create-mentor".equals(action)) {
                 catalog.createMentor(positiveLong(request, "userId"),
                         positiveInt(request, "departmentId"),
@@ -92,7 +114,7 @@ public class HRCatalogServlet extends HttpServlet {
             LOGGER.log(Level.SEVERE, "Unable to update HR catalog", e);
             request.getSession().setAttribute("errorMessage", "Không thể lưu thay đổi. Kiểm tra dữ liệu trùng.");
         }
-        response.sendRedirect(request.getContextPath() + "/hr/catalog");
+        response.sendRedirect(request.getContextPath() + request.getServletPath());
     }
 
     private boolean isHR(HttpServletRequest request) {
@@ -125,14 +147,23 @@ public class HRCatalogServlet extends HttpServlet {
         throw new IllegalArgumentException("Tham số không hợp lệ: " + name);
     }
 
-    private Date dateParam(HttpServletRequest request, String name) {
+    private Integer optionalDepartment(HttpServletRequest request) {
+        String value = request.getParameter("departmentId");
+        return value == null || value.isBlank() ? null : positiveInt(request, "departmentId");
+    }
+
+    static Date dateParam(HttpServletRequest request, String name) {
         String value = request.getParameter(name);
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Thiếu ngày: " + name);
         }
         try {
-            return Date.valueOf(value);
-        } catch (IllegalArgumentException e) {
+            LocalDate date = LocalDate.parse(value);
+            if (!date.toString().equals(value) || date.getYear() < 1000 || date.getYear() > 9999) {
+                throw new DateTimeParseException("Invalid MySQL DATE", value, 0);
+            }
+            return Date.valueOf(date);
+        } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Ngày không hợp lệ: " + name);
         }
     }

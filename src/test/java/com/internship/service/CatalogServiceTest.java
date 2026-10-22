@@ -37,15 +37,19 @@ class CatalogServiceTest {
                 return d;
             }
             @Override public int createDepartment(Department d) { return 1; }
+            @Override public void lockDepartment(int id, java.sql.Connection conn) { }
         };
         programs = new InternshipProgramDAO() {
-            @Override public int createProgram(InternshipProgram p) {
+            @Override public int createProgram(InternshipProgram p, java.sql.Connection conn) {
                 savedProgram = p;
                 return 2;
             }
             @Override public boolean activatePlannedProgram(int id) { return id == 2; }
+            @Override public boolean hasEquivalentProgram(String name, int dep, Date start, Date end,
+                                                          int exclude, java.sql.Connection conn) { return false; }
         };
         mentors = new MentorDAO() {
+            @Override public boolean hasMentorForUser(long id) { return false; }
             @Override public int createMentor(Mentor m) {
                 savedMentor = m;
                 return 3;
@@ -63,7 +67,7 @@ class CatalogServiceTest {
                 return user;
             }
         };
-        service = new CatalogService(departments, programs, mentors, users);
+        service = new CatalogService(departments, programs, mentors, users, new TestConnections());
     }
 
     @Test

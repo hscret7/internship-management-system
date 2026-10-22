@@ -15,6 +15,7 @@
                 <div class="card-body">
                     <!-- Form gửi dữ liệu tạo chương trình lên server -->
                     <form action="${pageContext.request.contextPath}/hr/programs/create" method="POST">
+    <input type="hidden" name="csrfToken" value="${csrfToken}" />
                         
                         <div class="mb-3">
                             <label for="programName" class="form-label fw-bold">Tên chương trình <span class="text-danger">*</span></label>

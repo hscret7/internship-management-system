@@ -56,6 +56,11 @@ public class Application implements Serializable {
         return submittedAt;
     }
 
+    /** UTC ISO-8601 instant for transport/HTML datetime; never a timezone-less string. */
+    public String getSubmittedAtIso() {
+        return submittedAt == null ? null : submittedAt.toInstant().toString();
+    }
+
     public void setSubmittedAt(Timestamp submittedAt) {
         this.submittedAt = submittedAt;
     }
@@ -70,6 +75,11 @@ public class Application implements Serializable {
 
     public Timestamp getReviewedAt() {
         return reviewedAt;
+    }
+
+    /** Null while unreviewed; otherwise UTC ISO-8601 with a trailing Z. */
+    public String getReviewedAtIso() {
+        return reviewedAt == null ? null : reviewedAt.toInstant().toString();
     }
 
     public void setReviewedAt(Timestamp reviewedAt) {
@@ -114,7 +124,7 @@ public class Application implements Serializable {
                 "applicationId=" + applicationId +
                 ", internId=" + internId +
                 ", status='" + status + '\'' +
-                ", submittedAt=" + submittedAt +
+                ", submittedAt=" + getSubmittedAtIso() +
                 ", reviewedBy=" + reviewedBy +
                 '}';
     }

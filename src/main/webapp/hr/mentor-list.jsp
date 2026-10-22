@@ -1,3 +1,6 @@
+
+
+
 <%@ page contentType="text/html; charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="pageTitle" value="Quản lý Mentor" />
@@ -7,7 +10,12 @@
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
+        </div>
+        <div class="alert alert-warning" role="status">Các thao tác Mentor chưa có API backend; không thể tạo hoặc chỉnh sửa.</div>
+
         <h2 class="h4">Danh sách Mentor & Phòng ban</h2>
+                        <div class="alert alert-warning" role="status">Chức năng chỉnh sửa Mentor chưa có API backend tương ứng nên hiện chưa khả dụng.</div>
+        <div class="alert alert-warning" role="status">Chức năng tạo Mentor chưa có API backend tương ứng nên hiện chưa khả dụng.</div>
         <!-- Nút thêm Mentor giả định mở một Modal hoặc chuyển trang -->
         <button class="btn btn-primary shadow-sm">
             + Thêm Mentor
@@ -28,6 +36,7 @@
                             <th class="text-center">Thao Tác</th>
                         </tr>
                     </thead>
+                        <c:if test="${empty mentorList}"><tr><td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu Mentor.</td></tr></c:if>
                     <tbody>
                         <!-- Vòng lặp lấy danh sách mentor từ biến mentorList do BE3 cung cấp -->
                         <c:forEach var="mentor" items="${mentorList}">
@@ -46,6 +55,7 @@
                                         </c:when>
                                         <c:otherwise>
                                             <span class="badge bg-secondary">Tạm nghỉ</span>
+                                    <span class="text-muted">Chưa có thao tác được tích hợp.</span>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
